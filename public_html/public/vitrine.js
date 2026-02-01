@@ -83,6 +83,8 @@ async function iniciar() {
 
         if (data.error) {
             mostrarErro(data.error);
+            esconderLoading();
+            return;
         } else if (data.loja) {
             lojaInfo = data.loja;
             produtosData = data.produtos || [];
