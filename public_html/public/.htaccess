@@ -1,0 +1,47 @@
+Options -Indexes
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # =========================================================
+    # ROTAS AMIGÁVEIS
+    # =========================================================
+    # /vitrine/nome-da-loja  ->  vitrine.html?slug=nome-da-loja
+    RewriteRule ^vitrine/([a-z0-9-]+)/?$ vitrine.html?slug=$1 [L,QSA]
+
+    # =========================================================
+    # URL canônica: remove .html (redirect 301)
+    # Ex: /login.html -> /login
+    # =========================================================
+    RewriteCond %{THE_REQUEST} \s/+([^\s?]+)\.html[\s?] [NC]
+    RewriteRule ^ %1 [R=301,L,NE]
+
+    # =========================================================
+    # Serve /pagina (sem extensão) usando /pagina.html, se existir
+    # Ex: /login -> /login.html
+    # =========================================================
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_FILENAME}.html -f
+    RewriteRule ^(.+?)/?$ $1.html [L]
+</IfModule>
+
+DirectoryIndex index.html
+
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType text/css "access plus 1 month"
+    ExpiresByType application/javascript "access plus 1 month"
+    ExpiresByType text/javascript "access plus 1 month"
+    ExpiresByType image/png "access plus 1 month"
+    ExpiresByType image/jpeg "access plus 1 month"
+    ExpiresByType image/gif "access plus 1 month"
+    ExpiresByType image/svg+xml "access plus 1 month"
+    ExpiresByType image/webp "access plus 1 month"
+    ExpiresByType image/x-icon "access plus 1 month"
+</IfModule>
+
+<IfModule mod_headers.c>
+    <FilesMatch "\.(css|js|png|jpe?g|gif|svg|webp|ico)$">
+        Header set Cache-Control "public, max-age=2592000"
+    </FilesMatch>
+</IfModule>

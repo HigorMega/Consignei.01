@@ -1,0 +1,150 @@
+        :root { 
+            --primary: #d4af37; --primary-hover: #b8962e;
+            --dark: #1a1a1a; --success: #00b894; --danger: #e15b67;
+            --overlay-bg: rgba(17, 17, 17, 0.55);
+            --overlay-blur: 6px;
+            --overlay-z: 4000;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #111 0%, #2a2a2a 100%);
+            display: flex; justify-content: center; align-items: center;
+            min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box;
+        }
+
+        .card {
+            background: white; padding: 40px; border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5); width: 100%; max-width: 400px;
+            border-top: 5px solid var(--primary);
+            position: relative; /* Para posicionamentos internos se precisar */
+        }
+
+        /* NOVO ESTILO DO BOTÃO VOLTAR (DENTRO DO CARD) */
+        .header-voltar {
+            width: 100%; text-align: left; margin-bottom: 20px;
+        }
+        .link-voltar {
+            text-decoration: none; color: #999; 
+            font-size: 13px; font-weight: 600; 
+            display: inline-flex; align-items: center; gap: 5px; 
+            transition: 0.2s;
+        }
+        .link-voltar:hover { 
+            color: var(--primary); transform: translateX(-3px);
+        }
+
+        .logo {
+            text-align: center; margin-bottom: 30px;
+            font-size: 24px; font-weight: 700; color: var(--dark);
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        .logo i { color: var(--primary); font-size: 28px; }
+
+        .input-group { margin-bottom: 15px; }
+        label { font-size: 13px; color: #666; font-weight: 500; display: block; margin-bottom: 5px; }
+        
+        .password-wrapper { position: relative; width: 100%; }
+        
+        input {
+            width: 100%; padding: 12px; border: 1px solid #ddd;
+            border-radius: 8px; box-sizing: border-box; font-family: 'Poppins', sans-serif;
+            transition: 0.3s;
+        }
+        input:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.2); }
+
+        .eye-icon {
+            position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+            cursor: pointer; color: #999; font-size: 20px; transition: 0.2s;
+        }
+        .eye-icon:hover { color: var(--primary); }
+
+        button {
+            width: 100%; padding: 12px; background: var(--primary); color: white;
+            border: none; border-radius: 8px; font-size: 16px; font-weight: 600;
+            cursor: pointer; margin-top: 10px; transition: 0.3s;
+        }
+        button:hover { background: var(--primary-hover); }
+        button:disabled { opacity: 0.7; cursor: not-allowed; }
+
+        .footer-link { text-align: center; margin-top: 20px; font-size: 13px; color: #888; }
+        .footer-link a { color: var(--primary); text-decoration: none; font-weight: 600; }
+        .footer-link a:hover { text-decoration: underline; }
+
+        /* MODAIS */
+        /* Padrão visual do overlay: cor, blur, opacidade, z-index e animação base */
+        .modal-overlay {
+            display: none; position: fixed; inset: 0; width: 100%; height: 100%;
+            background: var(--overlay-bg); z-index: var(--overlay-z);
+            opacity: 0; transition: opacity 0.25s ease;
+            backdrop-filter: blur(var(--overlay-blur));
+        }
+        .modal-overlay.open { display: flex; opacity: 1; animation: overlayFadeIn 0.25s ease; }
+        .modal--center { justify-content: center; align-items: center; }
+        .modal--side { justify-content: flex-end; align-items: stretch; }
+        .modal--fullscreen { justify-content: center; align-items: center; }
+        .modal-content {
+            background: white; padding: 30px; border-radius: 12px;
+            width: 90%; max-width: 350px; text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            animation: slideUp 0.3s ease;
+        }
+        .modal-header { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-bottom: 5px; }
+        .modal-body { margin-top: 10px; }
+        .modal-title { margin: 0; color: var(--dark); font-size: 18px; font-weight: 600; }
+        .modal-desc { font-size: 13px; color: #666; margin: 0; line-height: 1.5; }
+        .modal-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
+        .modal-actions:empty { display: none; }
+        .modal-icon { margin-bottom: 5px; font-size: 50px; display: flex; align-items: center; justify-content: center; }
+        .modal-icon--success { color: var(--success); }
+        .modal-icon--danger { color: var(--danger); }
+        .btn { width: 100%; padding: 12px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: 0.3s; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: var(--primary-hover); }
+        .btn-secondary { background: var(--dark); color: white; }
+        .btn-secondary:hover { background: #000; }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-danger:hover { filter: brightness(0.95); }
+        .is-hidden { display: none; }
+        @keyframes overlayFadeIn { from{opacity:0} to{opacity:1} }
+        @keyframes slideUp { from{transform:translateY(20px)} to{transform:translateY(0)} }
+
+        /* --- BARRA DE COOKIES (MINIMALISTA) --- */
+        .cookie-banner {
+            position: fixed; bottom: -100px; left: 0; width: 100%;
+            background: rgba(26, 26, 26, 0.95); 
+            border-top: 1px solid #333;
+            color: #fff; padding: 10px;
+            
+            /* CENTRALIZAÇÃO PERFEITA */
+            display: flex; justify-content: center; align-items: center; gap: 15px;
+            
+            box-shadow: 0 -5px 20px rgba(0,0,0,0.5);
+            z-index: 9999; backdrop-filter: blur(5px);
+            transition: bottom 0.5s ease-out;
+            box-sizing: border-box;
+        }
+        .cookie-banner.show { bottom: 0; }
+        
+        .cookie-text { 
+            font-size: 11px; line-height: 1.4; color: #ccc; 
+        }
+        .cookie-text a { color: var(--primary); text-decoration: none; font-weight: 600; }
+        .cookie-text a:hover { text-decoration: underline; }
+        
+        .cookie-btn {
+            background: var(--primary); color: white; border: none; 
+            padding: 5px 12px; /* Botão bem menor e fino */
+            border-radius: 4px; font-weight: 600; cursor: pointer; 
+            font-size: 11px; 
+            white-space: nowrap; margin: 0; width: auto;
+        }
+        .cookie-btn:hover { background: var(--primary-hover); }
+
+        @media (max-width: 600px) {
+            .cookie-banner { flex-direction: column; text-align: center; gap: 8px; }
+            .cookie-btn { width: 100%; }
+            .card { padding: 30px 20px; }
+        }
+
+    

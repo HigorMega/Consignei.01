@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Vitrine Exclusiva</title>
+    <link rel="icon" type="image/png" href="/img/favicon.png?v=1.2">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Montserrat:wght@300;400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        :root { 
+            --gold: #c5a059; --dark: #111111; --bg-color: #ffffff;
+            --card-bg: rgba(255,255,255,0.96);
+            --header-bg: rgba(255, 255, 255, 0.95);
+            --transition: all 0.3s ease;
+            --overlay-bg: rgba(17, 17, 17, 0.55);
+            --overlay-blur: 6px;
+            --overlay-z: 4000;
+        }
+        
+        body { 
+            font-family: 'Montserrat', sans-serif; 
+            margin: 0; 
+            color: var(--dark); 
+            min-height: 100vh; 
+            padding-bottom: 80px;
+            background-color: var(--bg-color);
+            background-image: url('fundo.jpg');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            background-repeat: no-repeat;
+        }
+        
+        * { box-sizing: border-box; outline: none; -webkit-tap-highlight-color: transparent; }
+
+        /* LOADING */
+        #loadingOverlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #fff; z-index: 9999;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            transition: opacity 0.5s ease;
+        }
+        .spinner {
+            width: 40px; height: 40px; border: 3px solid #eee; 
+            border-top-color: var(--gold); border-radius: 50%; animation: spin 1s infinite linear;
+        }
+        .force-close-btn {
+            margin-top: 20px; padding: 10px 20px; border: 1px solid #ccc;
+            background: #fff; color: #333; border-radius: 20px; cursor: pointer;
+            font-size: 12px; text-transform: uppercase;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* HEADER */
+        header { padding: 30px 20px 10px; text-align: center; max-width: 1400px; margin: 0 auto; }
+        header h1 { 
+            font-family: 'Cinzel', serif; font-size: clamp(20px, 5vw, 36px); 
+            margin: 0 0 10px 0; letter-spacing: 2px; color: var(--dark); 
+            text-transform: uppercase; font-weight: 700; 
+            text-shadow: 0 2px 10px rgba(255,255,255,0.8);
+        }
+        .header-info { display: flex; justify-content: center; align-items: center; gap: 15px; flex-wrap: wrap; margin-bottom: 15px; }
+        .info-base { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--dark); text-transform: uppercase; letter-spacing: 1px; font-weight: 600; text-decoration: none; background: rgba(255,255,255,0.8); padding: 5px 10px; border-radius: 20px; }
+        .info-base i { font-size: 16px; color: var(--gold); }
+
+        /* TOOLBAR */
+        .toolbar { 
+            display: flex; justify-content: space-between; align-items: center; 
+            padding: 15px 20px; max-width: 1400px; margin: 0 auto; 
+            background: var(--header-bg); position: sticky; top: 0; z-index: 1000; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.03); gap: 10px;
+            backdrop-filter: blur(5px);
+        }
+        .dropdown-container { position: relative; width: 100%; }
+        .dropdown-btn { 
+            background: #f9f9f9; border: 1px solid #eee; padding: 10px 15px; 
+            min-width: 180px; cursor: pointer; font-family: 'Montserrat', sans-serif; 
+            font-size: 12px; font-weight: 600; text-transform: uppercase; color: var(--dark); 
+            display: flex; justify-content: space-between; align-items: center; border-radius: 4px; width: 100%;
+        }
+        .dropdown-list { display: none; position: absolute; top: 100%; left: 0; width: 100%; background: white; box-shadow: 0 5px 15px rgba(0,0,0,0.1); border: 1px solid #eee; z-index: 101; max-height: 300px; overflow-y: auto; }
+        .dropdown-list.show { display: block; }
+        .dropdown-item { padding: 12px 20px; cursor: pointer; font-size: 13px; border-bottom: 1px solid #f9f9f9; }
+        .search-input { 
+            padding: 10px 15px; border: 1px solid #eee; background: #f9f9f9; 
+            border-radius: 4px; outline: none; font-family: 'Montserrat', sans-serif; 
+            width: 100%; font-size: 13px;
+        }
+
+        /* GRID PRODUTOS (AJUSTADO PARA PC) */
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        .grid { 
+            display: grid; 
+            /* MUDANÇA AQUI: aumentei de 160px para 280px para ficar grande no PC */
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); 
+            gap: 20px; /* Aumentei o espaço entre eles um pouquinho também */
+        }
+        .card { 
+            background: var(--card-bg); border: 1px solid rgba(0,0,0,0.05); border-radius: 8px; 
+            overflow: hidden; transition: var(--transition); display: flex; flex-direction: column;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+        .img-container { 
+            width: 100%; aspect-ratio: 1/1; overflow: hidden; position: relative; background: #f5f5f5; cursor: zoom-in;
+        }
+        .card img { 
+            width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s; 
+        }
+        .card img:hover { transform: scale(1.05); }
+        
+        .info { padding: 15px 10px; text-align: center; flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
+        .info h3 { font-family: 'Cinzel', serif; font-size: 15px; margin: 0 0 5px; color: var(--dark); line-height: 1.4; }
+        .preco { font-size: 18px; font-weight: 700; margin-bottom: 10px; color: var(--gold); }
+        .btn-add { 
+            width: 100%; cursor: pointer; background: var(--dark); color: #fff; 
+            padding: 12px; font-size: 12px; font-weight: 600; letter-spacing: 1px; 
+            border: none; border-radius: 4px; text-transform: uppercase; transition: var(--transition); 
+        }
+
+        /* CARRINHO */
+        .fab-sacola { position: fixed; bottom: 30px; right: 30px; background: var(--gold); color: #fff; width: 60px; height: 60px; border-radius: 50%; display: flex; justify-content: center; align-items: center; box-shadow: 0 5px 20px rgba(0,0,0,0.2); cursor: pointer; z-index: 2000; transition: 0.3s; }
+        .badge { position: absolute; top: -5px; right: -5px; background: #ff4d4d; width: 22px; height: 22px; border-radius: 50%; font-size: 11px; display: flex; justify-content: center; align-items: center; border: 2px solid #fff; font-weight: bold; }
+
+        /* ALERTAS PADRÃO (MESMO ESTILO DO LOGIN) */
+        .swal2-popup {
+            border-radius: 12px !important;
+            padding: 30px !important;
+            font-family: 'Poppins', sans-serif !important;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2) !important;
+        }
+        .swal2-title { font-size: 18px !important; color: var(--dark) !important; font-weight: 700 !important; margin-top: 10px !important; }
+        .swal2-html-container { font-size: 13px !important; color: #666 !important; margin-top: 6px !important; }
+        .swal2-confirm {
+            border-radius: 8px !important; padding: 10px 22px !important; font-weight: 600 !important; font-size: 13px !important;
+            background: #111 !important; color: #fff !important; box-shadow: none !important;
+        }
+
+        /* MODAIS */
+        /* Padrão visual do overlay: cor, blur, opacidade, z-index e animação base */
+        .modal-overlay { 
+            position: fixed; inset: 0; width: 100%; height: 100%;
+            background: var(--overlay-bg); z-index: var(--overlay-z); 
+            display: none; opacity: 0; transition: opacity 0.25s ease;
+            backdrop-filter: blur(var(--overlay-blur));
+        }
+        .modal-overlay.open { display: flex; opacity: 1; animation: overlayFadeIn 0.25s ease; }
+        .modal--center { justify-content: center; align-items: center; }
+        .modal--side { justify-content: flex-end; align-items: stretch; }
+        .modal--fullscreen { justify-content: center; align-items: center; }
+        @keyframes overlayFadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .modal-carrinho { background: #fff; width: 400px; max-width: 85%; height: 100%; display: flex; flex-direction: column; animation: slideLeft 0.3s ease; }
+        @keyframes slideLeft { from { transform: translateX(100%); } to { transform: translateX(0); } }
+        .modal-header { padding: 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+        .modal-body { flex: 1; overflow-y: auto; padding: 20px; }
+        .item-carrinho { display: flex; align-items: center; gap: 15px; padding: 15px 0; border-bottom: 1px solid #f5f5f5; }
+        .item-thumb { width: 50px; height: 50px; object-fit: cover; border-radius: 4px; }
+        .btn-finalizar { width: 100%; padding: 18px; background: #25D366; color: white; border: none; font-weight: 600; cursor: pointer; text-transform: uppercase; letter-spacing: 1px; display: flex; align-items: center; justify-content: center; gap: 10px; }
+
+        /* ZOOM */
+        #modalZoom { transition: opacity 0.3s ease; }
+        #imgZoomContainer { position: relative; max-width: 95%; max-height: 90%; }
+        #imgZoomFull { max-width: 100%; max-height: 80vh; border-radius: 4px; box-shadow: 0 0 20px rgba(0,0,0,0.5); object-fit: contain; }
+        .btn-fechar-zoom {
+            position: absolute; top: -50px; right: 0; color: white; font-size: 30px; cursor: pointer;
+            width: 40px; height: 40px; text-align: center;
+        }
+
+        /* CELULAR (MANTÉM 2 COLUNAS) */
+        @media (max-width: 768px) { 
+            .toolbar { flex-direction: column; padding: 15px; gap: 10px; } 
+            .dropdown-btn, .search-input { width: 100%; } 
+            .container { padding: 15px 10px; }
+            
+            /* FORÇA 2 COLUNAS NO CELULAR */
+            .grid { 
+                grid-template-columns: 1fr 1fr; 
+                gap: 10px; 
+            }
+            
+            .info h3 { font-size: 13px; }
+            .btn-add { font-size: 10px; padding: 8px; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="loadingOverlay">
+    <div class="spinner"></div>
+    <p style="margin-top: 15px; font-size: 12px; letter-spacing: 2px; text-transform: uppercase;">Carregando...</p>
+    <button class="force-close-btn" onclick="document.getElementById('loadingOverlay').style.display='none'">
+        Demorando? Clique para abrir
+    </button>
+</div>
+
+<div id="modalZoom" class="modal-overlay modal--fullscreen" role="dialog" aria-modal="true" aria-labelledby="modalZoomTitle" aria-describedby="modalZoomDesc">
+    <h2 class="modal-title" id="modalZoomTitle" style="position:absolute; left:-9999px;">Imagem ampliada</h2>
+    <p class="modal-desc" id="modalZoomDesc" style="position:absolute; left:-9999px;">Visualização ampliada do produto.</p>
+    <div id="imgZoomContainer">
+        <button type="button" class="btn-fechar-zoom" data-modal-close="modalZoom" aria-label="Fechar">&times;</button>
+        <img id="imgZoomFull" src="" alt="Zoom">
+    </div>
+</div>
+
+<header>
+    <h1 id="lojaTitulo">Minha Loja</h1>
+    <div id="headerRedes" class="header-info"></div>
+</header>
+
+<div class="toolbar">
+    <div class="dropdown-container">
+        <button class="dropdown-btn" onclick="toggleDropdown()">
+            <span id="catSelected">Categorias</span> <i class="ph ph-caret-down"></i>
+        </button>
+        <div id="dropdownList" class="dropdown-list"></div>
+    </div>
+    <input type="text" id="inputBusca" class="search-input" placeholder="Buscar..." onkeyup="filtrar()">
+</div>
+
+<div class="container">
+    <div class="grid" id="listaProdutos"></div>
+    <div id="msgVazio" style="text-align:center; padding:50px; display:none; grid-column: 1/-1;">
+        Nenhum produto encontrado.
+    </div>
+</div>
+
+<div class="fab-sacola" id="btnAbrirCarrinho">
+    <i class="ph ph-shopping-bag" style="font-size:26px;"></i>
+    <div class="badge" id="qtdCarrinho">0</div>
+</div>
+
+<div id="modalCarrinho" class="modal-overlay modal--side" role="dialog" aria-modal="true" aria-labelledby="modalCarrinhoTitle" aria-describedby="modalCarrinhoDesc">
+    <div class="modal-carrinho">
+        <div class="modal-header">
+            <h2 class="modal-title" id="modalCarrinhoTitle" style="font-family:Cinzel; margin:0; font-size: 18px;">Sacola</h2>
+            <p class="modal-desc" id="modalCarrinhoDesc" style="position:absolute; left:-9999px;">Itens adicionados à sacola.</p>
+            <button data-modal-close="modalCarrinho" style="font-size:24px; border:none; background:none;">&times;</button>
+        </div>
+        <div class="modal-body" id="itensCarrinho"></div>
+        <div style="padding:20px; border-top:1px solid #eee; background: #fafafa;">
+            <div style="display:flex; justify-content:space-between; font-weight:700; font-size:18px; margin-bottom:20px;">
+                <span>Total</span><span id="totalCarrinho" style="color: var(--gold);">R$ 0,00</span>
+            </div>
+            <button class="btn-finalizar" onclick="enviarWhatsApp()">
+                <i class="ph ph-whatsapp-logo" style="font-size: 20px;"></i> Enviar Pedido
+            </button>
+        </div>
+    </div>
+</div>
+
+<script src="js/modal.js"></script>
+<script src="vitrine.js"></script>
+</body>
+</html>

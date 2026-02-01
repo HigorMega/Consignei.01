@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consignei - Criar Conta</title>
+    <link rel="icon" type="image/png" href="/img/favicon.png?v=1.2">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    <style>
+        :root { 
+            --primary: #d4af37; --primary-hover: #b8962e;
+            --dark: #1a1a1a; --success: #00b894; --danger: #e15b67;
+            --overlay-bg: rgba(17, 17, 17, 0.55);
+            --overlay-blur: 6px;
+            --overlay-z: 4000;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #111 0%, #2a2a2a 100%);
+            display: flex; justify-content: center; align-items: center;
+            min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box;
+        }
+
+        .card {
+            background: white; padding: 40px; border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5); width: 100%; max-width: 400px;
+            border-top: 5px solid var(--primary);
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* ESTILO DO BOTÃO VOLTAR (DENTRO DO CARD) */
+        .header-voltar {
+            width: 100%; text-align: left; margin-bottom: 20px;
+        }
+        .link-voltar {
+            text-decoration: none; color: #999; 
+            font-size: 13px; font-weight: 600; 
+            display: inline-flex; align-items: center; gap: 5px; 
+            transition: 0.2s;
+        }
+        .link-voltar:hover { 
+            color: var(--primary); transform: translateX(-3px);
+        }
+
+        .logo {
+            text-align: center; margin-bottom: 30px;
+            font-size: 24px; font-weight: 700; color: var(--dark);
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        .logo i { color: var(--primary); font-size: 28px; }
+
+        .input-group { margin-bottom: 15px; }
+        label { font-size: 13px; color: #666; font-weight: 500; display: block; margin-bottom: 5px; }
+        
+        .password-wrapper { position: relative; width: 100%; }
+        
+        input {
+            width: 100%; padding: 12px; border: 1px solid #ddd;
+            border-radius: 8px; box-sizing: border-box; font-family: 'Poppins', sans-serif;
+            transition: 0.3s;
+        }
+        input:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.2); }
+        input.error { border-color: var(--danger); background-color: #fff8f8; }
+
+        .eye-icon {
+            position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+            cursor: pointer; color: #999; font-size: 20px; transition: 0.2s;
+        }
+        .eye-icon:hover { color: var(--primary); }
+
+        button {
+            width: 100%; padding: 12px; background: var(--primary); color: white;
+            border: none; border-radius: 8px; font-size: 16px; font-weight: 600;
+            cursor: pointer; margin-top: 15px; transition: 0.3s;
+        }
+        button:hover { background: var(--primary-hover); }
+        button:disabled { opacity: 0.7; cursor: not-allowed; background: #ccc; }
+
+        .footer-link { text-align: center; margin-top: 20px; font-size: 13px; color: #888; }
+        .footer-link a { color: var(--primary); text-decoration: none; font-weight: 600; }
+        .footer-link a:hover { text-decoration: underline; }
+
+        .terms-group {
+            display: flex; align-items: flex-start; gap: 10px; margin-top: 15px;
+            font-size: 12px; color: #666; line-height: 1.4;
+        }
+        .terms-group input {
+            margin-top: 2px; cursor: pointer; accent-color: var(--primary); width: 16px; height: 16px;
+        }
+        .terms-group a { color: var(--primary); text-decoration: none; font-weight: 600; }
+        .terms-group a:hover { text-decoration: underline; }
+
+        .password-requirements {
+            list-style: none; padding: 0; margin: 10px 0 0 0;
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            gap: 8px;
+        }
+        .req-item { 
+            font-size: 11px; color: #999; 
+            display: flex; align-items: center; gap: 6px; 
+            transition: 0.3s;
+            white-space: nowrap; 
+            overflow: hidden; text-overflow: ellipsis;
+        }
+        
+        .req-item i { 
+            font-size: 14px; width: 14px; height: 14px; 
+            display: inline-flex; align-items: center; justify-content: center;
+            flex-shrink: 0; 
+        }
+        
+        .req-item.valid { color: var(--success); font-weight: 600; }
+        .req-item.valid i { 
+            content: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" fill="%2328a745" viewBox="0 0 256 256"><path d="M173.66,98.34a8,8,0,0,1,0,11.32l-56,56a8,8,0,0,1-11.32,0l-24-24a8,8,0,0,1,11.32-11.32L112,148.69l50.34-50.35A8,8,0,0,1,173.66,98.34Z"></path></svg>'); 
+        }
+
+        /* ALERTAS PADRÃO (MESMO ESTILO DO LOGIN) */
+        .swal2-popup { 
+            border-radius: 12px !important; padding: 30px !important; font-family: 'Poppins', sans-serif !important;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2) !important;
+        }
+        .swal2-title { font-size: 18px !important; color: var(--dark) !important; font-weight: 700 !important; margin-top: 10px !important; }
+        .swal2-html-container { font-size: 13px !important; color: #666 !important; margin-top: 6px !important; }
+        .swal2-confirm {
+            border-radius: 8px !important; padding: 10px 22px !important; font-weight: 600 !important; font-size: 13px !important;
+            background: var(--dark) !important; color: #fff !important; box-shadow: none !important;
+        }
+
+        @media (max-width: 340px) {
+            .password-requirements { grid-template-columns: 1fr; } 
+        }
+
+        /* Padrão visual do overlay: cor, blur, opacidade, z-index e animação base */
+        .modal-overlay {
+            display: none; position: fixed; inset: 0; width: 100%; height: 100%;
+            background: var(--overlay-bg); z-index: var(--overlay-z);
+            opacity: 0; transition: opacity 0.25s ease;
+            backdrop-filter: blur(var(--overlay-blur));
+        }
+        .modal-overlay.open { display: flex; opacity: 1; animation: overlayFadeIn 0.25s ease; }
+        .modal--center { justify-content: center; align-items: center; }
+        .modal--side { justify-content: flex-end; align-items: stretch; }
+        .modal--fullscreen { justify-content: center; align-items: center; }
+        .modal-content {
+            background: white; padding: 30px; border-radius: 12px;
+            width: 90%; max-width: 350px; text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            animation: slideUp 0.3s ease;
+        }
+        .modal-header { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-bottom: 5px; }
+        .modal-body { margin-top: 10px; }
+        .modal-title { margin: 0; color: var(--dark); font-size: 18px; font-weight: 600; }
+        .modal-desc { font-size: 13px; color: #666; margin: 0; line-height: 1.5; }
+        .modal-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
+        .modal-actions:empty { display: none; }
+        .modal-icon { margin-bottom: 5px; font-size: 50px; display: flex; align-items: center; justify-content: center; }
+        .modal-icon--primary { color: var(--primary); }
+        .modal-icon--danger { color: var(--danger); }
+        .modal-info { background: #f8f9fa; padding: 10px; border-radius: 6px; margin-bottom: 15px; border: 1px dashed #ccc; }
+        .modal-email { color: var(--dark); font-size: 14px; }
+        .modal-edit-link { font-size: 11px; color: var(--primary); cursor: pointer; text-decoration: underline; }
+        .modal-note { font-size: 11px; color: #999; margin: 0; }
+        .modal-correction { display: none; margin-bottom: 15px; }
+        .modal-correction input { margin-bottom: 5px; }
+        .btn { width: 100%; padding: 12px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: 0.3s; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: var(--primary-hover); }
+        .btn-secondary { background: var(--dark); color: white; }
+        .btn-secondary:hover { background: #000; }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-danger:hover { filter: brightness(0.95); }
+        .btn-small { padding: 8px; font-size: 13px; border-radius: 6px; }
+        @keyframes overlayFadeIn { from{opacity:0} to{opacity:1} }
+        @keyframes slideUp { from{transform:translateY(20px)} to{transform:translateY(0)} }
+        
+        .error-text { color: var(--danger); font-size: 11px; margin-top: 4px; display: none; }
+        
+        @media (max-width: 600px) {
+            .card { padding: 30px 20px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <div class="header-voltar">
+        <a href="/" class="link-voltar">
+            <i class="ph ph-arrow-left"></i> Voltar ao Site
+        </a>
+    </div>
+
+    <div class="logo"><i class="ph-fill ph-diamonds-four"></i> Consignei</div>
+    
+    <form id="formCadastro">
+        <div class="input-group">
+            <label>Nome da Loja</label>
+            <input type="text" name="nome_loja" placeholder="Ex: Joias da Ana" required>
+        </div>
+        
+        <div class="input-group">
+            <label>Seu Nome</label>
+            <input type="text" name="nome_responsavel" placeholder="Seu nome completo" required>
+        </div>
+
+        <div class="input-group">
+            <label>E-mail</label>
+            <input type="email" name="email" id="email" placeholder="seu@email.com" required>
+        </div>
+
+        <div class="input-group">
+            <label>Confirme o E-mail</label>
+            <input type="email" id="confEmail" placeholder="Digite o e-mail novamente" required onpaste="return false;">
+            <div class="error-text" id="errEmail">Os e-mails não coincidem.</div>
+        </div>
+
+        <div class="input-group">
+            <label>Senha</label>
+            <div class="password-wrapper">
+                <input type="password" id="senhaCad" name="senha" placeholder="Crie uma senha forte" required>
+                <i class="ph ph-eye-slash eye-icon" onclick="toggleSenha('senhaCad', this)"></i>
+            </div>
+            
+            <ul class="password-requirements">
+                <li class="req-item" id="reqMin"><i class="ph ph-circle"></i> Mínimo 8 dígitos</li>
+                <li class="req-item" id="reqNum"><i class="ph ph-circle"></i> Pelo menos 1 número</li>
+                <li class="req-item" id="reqUpper"><i class="ph ph-circle"></i> 1 Letra Maiúscula</li>
+                <li class="req-item" id="reqSym"><i class="ph ph-circle"></i> 1 Símbolo (@#$%)</li>
+            </ul>
+        </div>
+
+        <div class="input-group">
+            <label>Confirme a Senha</label>
+            <div class="password-wrapper">
+                <input type="password" id="confSenha" placeholder="Repita a senha" required>
+                <i class="ph ph-eye-slash eye-icon" onclick="toggleSenha('confSenha', this)"></i>
+            </div>
+            <div class="error-text" id="errSenha">As senhas não coincidem.</div>
+        </div>
+
+        <div class="terms-group">
+            <input type="checkbox" id="aceiteTermos" required>
+            <label for="aceiteTermos">
+                Li e concordo com os <a href="termos" target="_blank">Termos de Uso</a> e <a href="privacidade" target="_blank">Política de Privacidade</a>.
+            </label>
+        </div>
+
+        <button type="submit" id="btnCadastrar">Criar Minha Conta</button>
+    </form>
+
+    <div class="footer-link">
+        Já tem uma conta? <br>
+        <a href="login">Fazer Login</a>
+    </div>
+</div>
+
+<div id="modalSucesso" class="modal-overlay modal--center" role="dialog" aria-modal="true" aria-labelledby="modalSucessoTitle" aria-describedby="modalSucessoDesc">
+    <div class="modal-content">
+        <div class="modal-header">
+            <div class="modal-icon modal-icon--primary">
+                <i class="ph-fill ph-envelope-simple-open"></i>
+            </div>
+            <h3 class="modal-title" id="modalSucessoTitle">Quase lá!</h3>
+            <p class="modal-desc" id="modalSucessoDesc">
+                Enviamos o link de confirmação para:
+            </p>
+        </div>
+
+        <div class="modal-body">
+            <div class="modal-info">
+                <strong id="emailMostra" class="modal-email">...</strong>
+                <br>
+                <span class="modal-edit-link" onclick="mostrarInputCorrecao()">
+                    Errei o e-mail (Corrigir)
+                </span>
+            </div>
+
+            <div id="areaCorrecao" class="modal-correction">
+                <input type="email" id="inputNovoEmail" placeholder="Digite o e-mail correto...">
+                <button class="btn btn-primary btn-small" onclick="salvarCorrecaoEmail()">Reenviar Agora</button>
+            </div>
+
+            <p class="modal-note">
+                Verifique também sua caixa de Spam.
+            </p>
+        </div>
+
+        <div class="modal-actions">
+            <button id="btnVoltarLogin" class="btn btn-secondary">
+                Voltar para Login
+            </button>
+        </div>
+    </div>
+</div>
+
+<div id="modalErro" class="modal-overlay modal--center" role="dialog" aria-modal="true" aria-labelledby="modalErroTitle" aria-describedby="modalErroDesc">
+    <div class="modal-content">
+        <div class="modal-header">
+            <div class="modal-icon modal-icon--danger"><i class="ph-fill ph-warning-circle"></i></div>
+            <h3 class="modal-title" id="modalErroTitle">Ops, algo deu errado</h3>
+            <p class="modal-desc" id="modalErroDesc">Não foi possível criar a conta.</p>
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-secondary" data-modal-close="modalErro">Tentar Novamente</button>
+        </div>
+    </div>
+</div>
+
+<script src="js/modal.js"></script>
+<script>
+    let idLojaRecemCriada = null;
+
+    document.getElementById('btnVoltarLogin').addEventListener('click', () => {
+        window.location.href = 'login.html';
+    });
+
+    function mostrarAlertaPadrao(titulo, mensagem, tipo = 'error') {
+        Swal.fire({ icon: tipo, title: titulo, text: mensagem });
+    }
+
+    function toggleSenha(inputId, icon) {
+        const input = document.getElementById(inputId);
+        if (input.type === "password") {
+            input.type = "text";
+            icon.classList.remove('ph-eye-slash');
+            icon.classList.add('ph-eye');
+        } else {
+            input.type = "password";
+            icon.classList.remove('ph-eye');
+            icon.classList.add('ph-eye-slash');
+        }
+    }
+
+    const senhaInput = document.getElementById('senhaCad');
+    const patterns = {
+        reqMin: /.{8,}/,
+        reqNum: /[0-9]/,
+        reqUpper: /[A-Z]/,
+        reqSym: /[^A-Za-z0-9]/
+    };
+
+    senhaInput.addEventListener('keyup', function() {
+        const val = this.value;
+        for (const [id, regex] of Object.entries(patterns)) {
+            const el = document.getElementById(id);
+            const icon = el.querySelector('i');
+            if (regex.test(val)) {
+                el.classList.add('valid');
+                icon.className = 'ph-fill ph-check-circle';
+            } else {
+                el.classList.remove('valid');
+                icon.className = 'ph ph-circle';
+            }
+        }
+    });
+
+    document.getElementById('formCadastro').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const email = document.getElementById('email');
+        const confEmail = document.getElementById('confEmail');
+        const senha = document.getElementById('senhaCad');
+        const confSenha = document.getElementById('confSenha');
+        let valido = true;
+
+        [email, confEmail, senha, confSenha].forEach(el => el.classList.remove('error'));
+        document.getElementById('errEmail').style.display = 'none';
+        document.getElementById('errSenha').style.display = 'none';
+
+        if (email.value.trim().toLowerCase() !== confEmail.value.trim().toLowerCase()) {
+            confEmail.classList.add('error');
+            document.getElementById('errEmail').style.display = 'block';
+            valido = false;
+        }
+
+        const isStrong = Object.values(patterns).every(regex => regex.test(senha.value));
+        if (!isStrong) {
+            senha.classList.add('error');
+            mostrarAlertaPadrao('Atenção', 'Sua senha deve atender a todos os requisitos listados.');
+            valido = false;
+        }
+
+        if (senha.value !== confSenha.value) {
+            confSenha.classList.add('error');
+            document.getElementById('errSenha').style.display = 'block';
+            valido = false;
+        }
+
+        if (!valido) return;
+
+        const btn = document.getElementById('btnCadastrar');
+        const textoOriginal = btn.innerText;
+        btn.innerText = "Criando Loja..."; btn.disabled = true; btn.style.opacity = "0.7";
+
+        const formData = new FormData(this);
+        const dados = Object.fromEntries(formData.entries());
+
+        try {
+            const response = await fetch('../api/register.php', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(dados)
+            });
+            const result = await response.json();
+
+            if (result.success) {
+                idLojaRecemCriada = result.dados.id;
+                document.getElementById('emailMostra').innerText = result.dados.email;
+                openModal('modalSucesso');
+            } else {
+                document.getElementById('modalErroDesc').innerText = result.message || "Erro desconhecido.";
+                openModal('modalErro');
+                btn.innerText = textoOriginal; btn.disabled = false; btn.style.opacity = "1";
+            }
+        } catch (error) {
+            console.error('Erro:', error);
+            document.getElementById('modalErroDesc').innerText = "Erro de conexão com o servidor.";
+            openModal('modalErro');
+            btn.innerText = textoOriginal; btn.disabled = false; btn.style.opacity = "1";
+        }
+    });
+
+    function mostrarInputCorrecao() { document.getElementById('areaCorrecao').style.display = 'block'; }
+    async function salvarCorrecaoEmail() {
+        const novoEmail = document.getElementById('inputNovoEmail').value;
+        if(!novoEmail || !novoEmail.includes('@')) {
+            mostrarAlertaPadrao('Atenção', 'Digite um e-mail válido.');
+            return;
+        }
+        try {
+            const res = await fetch('../api/corrigir_cadastro_inicial.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id_loja: idLojaRecemCriada, novo_email: novoEmail }) });
+            const json = await res.json();
+            if(json.success) {
+                document.getElementById('emailMostra').innerText = novoEmail;
+                document.getElementById('areaCorrecao').style.display = 'none';
+                mostrarAlertaPadrao('Sucesso', 'E-mail corrigido e reenviado!', 'success');
+            } else {
+                mostrarAlertaPadrao('Erro', json.message || 'Não foi possível atualizar o e-mail.');
+            }
+        } catch(e) {
+            mostrarAlertaPadrao('Erro', 'Erro de conexão.');
+        }
+    }
+</script>
+
+</body>
+</html>

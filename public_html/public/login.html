@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consignei - Login</title>
+    <link rel="icon" type="image/png" href="/img/favicon.png?v=1.2">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    <link rel="stylesheet" href="/assets/css/auth.css">
+
+</head>
+<body>
+
+<div class="card">
+    <div class="header-voltar">
+        <a href="/" class="link-voltar">
+            <i class="ph ph-arrow-left"></i> Voltar ao Site
+        </a>
+    </div>
+
+    <div class="logo"><i class="ph-fill ph-diamonds-four"></i> Consignei</div>
+    
+    <form id="formLogin">
+        <div class="input-group">
+            <label>E-mail</label>
+            <input type="email" id="email" placeholder="seu@email.com" required>
+        </div>
+
+        <div class="input-group">
+            <label>Senha</label>
+            <div class="password-wrapper">
+                <input type="password" id="senha" placeholder="Sua senha" required>
+                <i class="ph ph-eye-slash eye-icon" onclick="toggleSenha('senha', this)"></i>
+            </div>
+            
+            <div style="text-align: right; margin-top: 5px;">
+                <a href="recuperar" style="font-size: 11px; color: #999; text-decoration: none;">Esqueci minha senha</a>
+            </div>
+        </div>
+
+        <button type="submit" id="btnEntrar">Entrar no Sistema</button>
+    </form>
+
+    <div class="footer-link">
+        Ainda não tem conta? <br>
+        <a href="cadastro">Criar conta grátis</a>
+    </div>
+
+    <div style="margin-top: 25px; border-top: 1px solid #eee; padding-top: 15px; font-size: 11px; text-align: center; color: #999;">
+        Ao continuar, você concorda com nossos <br>
+        <a href="termos" target="_blank" style="color: #666; text-decoration: underline;">Termos de Uso</a> e 
+        <a href="privacidade" target="_blank" style="color: #666; text-decoration: underline;">Política de Privacidade</a>.
+    </div>
+</div>
+
+<div id="cookieBanner" class="cookie-banner">
+    <div class="cookie-text">
+        Usamos cookies para melhorar sua experiência. Ao continuar, você concorda com a 
+        <a href="privacidade.html" target="_blank">Política de Privacidade</a>.
+    </div>
+    <button class="cookie-btn" onclick="aceitarCookies()">Aceitar</button>
+</div>
+
+<div id="modalSucesso" class="modal-overlay modal--center" role="dialog" aria-modal="true" aria-labelledby="modalSucessoTitle" aria-describedby="modalSucessoDesc">
+    <div class="modal-content">
+        <div class="modal-header">
+            <div class="modal-icon modal-icon--success">
+                <i class="ph-fill ph-check-circle"></i>
+            </div>
+            <h3 class="modal-title" id="modalSucessoTitle">Bem-vindo!</h3>
+            <p class="modal-desc" id="modalSucessoDesc">Redirecionando para o painel...</p>
+        </div>
+        <div class="modal-actions"></div>
+    </div>
+</div>
+
+<div id="modalErro" class="modal-overlay modal--center" role="dialog" aria-modal="true" aria-labelledby="modalErroTitle" aria-describedby="modalErroDesc">
+    <div class="modal-content">
+        <div class="modal-header">
+            <div class="modal-icon modal-icon--danger">
+                <i class="ph-fill ph-warning-circle"></i>
+            </div>
+            <h3 class="modal-title" id="modalErroTitle">Atenção</h3>
+            <p class="modal-desc" id="modalErroDesc">
+                Erro ao processar.
+            </p>
+        </div>
+
+        <div class="modal-actions">
+            <button id="btnFecharErro" class="btn btn-secondary" data-modal-close="modalErro">
+                Tentar Novamente
+            </button>
+
+            <button id="btnReenviarEmail" class="btn btn-primary is-hidden">
+                Reenviar E-mail de Ativação
+            </button>
+        </div>
+    </div>
+</div>
+
+<script src="js/modal.js"></script>
+<script src="/assets/js/auth.js"></script>
+
+</body>
+</html>

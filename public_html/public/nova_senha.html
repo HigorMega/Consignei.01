@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nova Senha - Consignei</title>
+    <link rel="icon" type="image/png" href="/img/favicon.png?v=1.2">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    
+    <style>
+        :root { 
+            --primary: #d4af37; --primary-hover: #b8962e;
+            --dark: #1a1a1a; --success: #00b894; --danger: #e15b67;
+            --overlay-bg: rgba(17, 17, 17, 0.55);
+            --overlay-blur: 6px;
+            --overlay-z: 4000;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #111 0%, #2a2a2a 100%);
+            display: flex; justify-content: center; align-items: center;
+            min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box;
+        }
+
+        .card {
+            background: white; padding: 40px; border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5); width: 100%; max-width: 400px;
+            border-top: 5px solid var(--primary);
+            overflow: hidden;
+        }
+
+        .logo { margin-bottom: 20px; text-align: center; font-size: 24px; font-weight: 700; color: var(--dark); display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .logo i { color: var(--primary); font-size: 28px; }
+
+        h2 { margin: 0 0 10px 0; color: var(--dark); font-size: 22px; text-align: center; }
+        p.desc { color: #666; font-size: 13px; margin-bottom: 25px; text-align: center; line-height: 1.5; }
+
+        .input-group { margin-bottom: 15px; }
+        label { font-size: 13px; color: #666; font-weight: 500; display: block; margin-bottom: 5px; }
+        
+        .password-wrapper { position: relative; width: 100%; }
+        input {
+            width: 100%; padding: 12px; border: 1px solid #ddd;
+            border-radius: 8px; box-sizing: border-box; font-family: 'Poppins', sans-serif;
+            transition: 0.3s;
+        }
+        input:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.2); }
+        input.error { border-color: var(--danger); background-color: #fff8f8; }
+
+        .eye-icon {
+            position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+            cursor: pointer; color: #999; font-size: 20px; transition: 0.2s;
+        }
+        .eye-icon:hover { color: var(--primary); }
+
+        .password-requirements {
+            list-style: none; padding: 0; margin: 10px 0 0 0;
+            display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+        }
+        .req-item { 
+            font-size: 11px; color: #999; display: flex; align-items: center; gap: 6px; 
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .req-item i { font-size: 14px; width: 14px; height: 14px; flex-shrink: 0; display: inline-flex; justify-content: center; align-items: center; }
+        .req-item.valid { color: var(--success); font-weight: 600; }
+        .req-item.valid i { content: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" fill="%2328a745" viewBox="0 0 256 256"><path d="M173.66,98.34a8,8,0,0,1,0,11.32l-56,56a8,8,0,0,1-11.32,0l-24-24a8,8,0,0,1,11.32-11.32L112,148.69l50.34-50.35A8,8,0,0,1,173.66,98.34Z"></path></svg>'); }
+
+        button {
+            width: 100%; padding: 12px; background: var(--primary); color: white;
+            border: none; border-radius: 8px; font-size: 16px; font-weight: 600;
+            cursor: pointer; margin-top: 15px; transition: 0.3s;
+        }
+        button:hover { background: var(--primary-hover); }
+        button:disabled { opacity: 0.7; cursor: not-allowed; background: #ccc; }
+
+        .error-text { color: var(--danger); font-size: 11px; margin-top: 4px; display: none; }
+        
+        /* Padrão visual do overlay: cor, blur, opacidade, z-index e animação base */
+        .modal-overlay { 
+            display: none; position: fixed; inset: 0; width: 100%; height: 100%;
+            background: var(--overlay-bg); z-index: var(--overlay-z);
+            opacity: 0; transition: opacity 0.25s ease;
+            backdrop-filter: blur(var(--overlay-blur));
+        }
+        .modal-overlay.open { display: flex; opacity: 1; animation: overlayFadeIn 0.25s ease; }
+        .modal--center { justify-content: center; align-items: center; }
+        .modal--side { justify-content: flex-end; align-items: stretch; }
+        .modal--fullscreen { justify-content: center; align-items: center; }
+        .modal-content { background: white; padding: 30px; border-radius: 12px; width: 90%; max-width: 350px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.2); animation: slideUp 0.3s ease; }
+        .modal-header { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-bottom: 5px; }
+        .modal-body { margin-top: 10px; }
+        .modal-title { margin: 0; color: var(--dark); font-size: 18px; font-weight: 600; }
+        .modal-desc { font-size: 13px; color: #666; margin: 0; line-height: 1.5; }
+        .modal-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
+        .modal-actions:empty { display: none; }
+        .modal-icon { margin-bottom: 5px; font-size: 50px; display: flex; align-items: center; justify-content: center; }
+        .modal-icon--success { color: var(--success); }
+        .modal-icon--danger { color: var(--danger); }
+        .btn { width: 100%; padding: 12px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: 0.3s; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: var(--primary-hover); }
+        .btn-secondary { background: var(--dark); color: white; }
+        .btn-secondary:hover { background: #000; }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-danger:hover { filter: brightness(0.95); }
+        @keyframes overlayFadeIn { from{opacity:0} to{opacity:1} }
+        @keyframes slideUp { from{transform:translateY(20px)} to{transform:translateY(0)} }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <div class="logo"><i class="ph-fill ph-diamonds-four"></i> Consignei</div>
+    <h2>Nova Senha</h2>
+    <p class="desc">Crie uma nova senha segura para acessar sua conta.</p>
+
+    <form id="formReset">
+        <div class="input-group">
+            <label>Nova Senha</label>
+            <div class="password-wrapper">
+                <input type="password" id="senhaNova" placeholder="Mínimo 8 caracteres" required>
+                <i class="ph ph-eye-slash eye-icon" onclick="toggleSenha('senhaNova', this)"></i>
+            </div>
+            <ul class="password-requirements">
+                <li class="req-item" id="reqMin"><i class="ph ph-circle"></i> Mín. 8 dígitos</li>
+                <li class="req-item" id="reqNum"><i class="ph ph-circle"></i> 1 Número</li>
+                <li class="req-item" id="reqUpper"><i class="ph ph-circle"></i> 1 Maiúscula</li>
+                <li class="req-item" id="reqSym"><i class="ph ph-circle"></i> 1 Símbolo</li>
+            </ul>
+        </div>
+
+        <div class="input-group">
+            <label>Confirme a Nova Senha</label>
+            <div class="password-wrapper">
+                <input type="password" id="confSenha" placeholder="Repita a senha" required>
+                <i class="ph ph-eye-slash eye-icon" onclick="toggleSenha('confSenha', this)"></i>
+            </div>
+            <div class="error-text" id="errSenha">As senhas não coincidem.</div>
+        </div>
+
+        <button type="submit" id="btnSalvar">Salvar Nova Senha</button>
+    </form>
+</div>
+
+<div id="modalSucesso" class="modal-overlay modal--center" role="dialog" aria-modal="true" aria-labelledby="modalSucessoTitle" aria-describedby="modalSucessoDesc">
+    <div class="modal-content">
+        <div class="modal-header">
+            <div class="modal-icon modal-icon--success"><i class="ph-fill ph-check-circle"></i></div>
+            <h3 class="modal-title" id="modalSucessoTitle">Senha Alterada!</h3>
+            <p class="modal-desc" id="modalSucessoDesc">Sua senha foi atualizada com sucesso.</p>
+        </div>
+        <div class="modal-actions">
+            <button id="btnIrLogin" class="btn btn-secondary">Ir para Login</button>
+        </div>
+    </div>
+</div>
+
+<div id="modalErro" class="modal-overlay modal--center" role="dialog" aria-modal="true" aria-labelledby="modalErroTitle" aria-describedby="modalErroDesc">
+    <div class="modal-content">
+        <div class="modal-header">
+            <div class="modal-icon modal-icon--danger"><i class="ph-fill ph-warning-circle"></i></div>
+            <h3 class="modal-title" id="modalErroTitle">Atenção</h3>
+            <p class="modal-desc" id="modalErroDesc">Ocorreu um erro.</p>
+        </div>
+        <div class="modal-actions">
+            <button id="btnFecharErro" class="btn btn-secondary" data-modal-close="modalErro">Entendi, vou corrigir</button>
+        </div>
+    </div>
+</div>
+
+<script src="js/modal.js"></script>
+<script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get('token');
+    const btnFecharErro = document.getElementById('btnFecharErro');
+
+    if (!token) {
+        document.getElementById('modalErroDesc').innerText = "Link inválido ou quebrado. Solicite um novo.";
+        btnFecharErro.innerText = "Solicitar Novo Link";
+        btnFecharErro.removeAttribute('data-modal-close');
+        btnFecharErro.addEventListener('click', () => {
+            window.location.href = 'recuperar.html';
+        });
+        openModal('modalErro');
+    }
+
+    document.getElementById('btnIrLogin').addEventListener('click', () => {
+        window.location.href = 'login.html';
+    });
+
+    function toggleSenha(inputId, icon) {
+        const input = document.getElementById(inputId);
+        if (input.type === "password") {
+            input.type = "text"; icon.classList.replace('ph-eye-slash', 'ph-eye');
+        } else {
+            input.type = "password"; icon.classList.replace('ph-eye', 'ph-eye-slash');
+        }
+    }
+
+    const senhaInput = document.getElementById('senhaNova');
+    const patterns = {
+        reqMin: /.{8,}/, reqNum: /[0-9]/, reqUpper: /[A-Z]/, reqSym: /[^A-Za-z0-9]/
+    };
+
+    senhaInput.addEventListener('keyup', function() {
+        const val = this.value;
+        for (const [id, regex] of Object.entries(patterns)) {
+            const el = document.getElementById(id);
+            const icon = el.querySelector('i');
+            if (regex.test(val)) {
+                el.classList.add('valid');
+                icon.className = 'ph-fill ph-check-circle';
+            } else {
+                el.classList.remove('valid');
+                icon.className = 'ph ph-circle';
+            }
+        }
+    });
+
+    document.getElementById('formReset').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const senha = document.getElementById('senhaNova');
+        const confSenha = document.getElementById('confSenha');
+        const btn = document.getElementById('btnSalvar');
+        const originalText = btn.innerText;
+
+        document.getElementById('errSenha').style.display = 'none';
+        
+        const isStrong = Object.values(patterns).every(regex => regex.test(senha.value));
+        if(!isStrong) {
+            document.getElementById('modalErroDesc').innerText = "Sua senha precisa atender a todos os requisitos.";
+            openModal('modalErro');
+            return;
+        }
+
+        if(senha.value !== confSenha.value) {
+            document.getElementById('errSenha').style.display = 'block';
+            return;
+        }
+
+        btn.innerText = "Salvando..."; btn.disabled = true;
+
+        try {
+            const res = await fetch('../api/reset_senha.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token: token, nova_senha: senha.value })
+            });
+            const json = await res.json();
+
+            if(json.success) {
+                openModal('modalSucesso');
+            } else {
+                document.getElementById('modalErroDesc').innerText = json.message;
+                openModal('modalErro');
+                btn.innerText = originalText; 
+                btn.disabled = false;
+            }
+        } catch(e) {
+            document.getElementById('modalErroDesc').innerText = "Erro de conexão.";
+            openModal('modalErro');
+            btn.innerText = originalText; 
+            btn.disabled = false;
+        }
+    });
+</script>
+
+</body>
+</html>

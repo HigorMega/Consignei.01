@@ -1,0 +1,59 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # =========================================================
+    # 1) URL canônica: tira /public/ da URL (deixa URL limpa)
+    # =========================================================
+    RewriteCond %{THE_REQUEST} \s/+public/([^\s?]*) [NC]
+    RewriteRule ^public/(.*)$ /$1 [R=301,L,NE]
+
+    # =========================================================
+    # 2) URL canônica: tira /index.html (deixa só /)
+    # =========================================================
+    RewriteCond %{THE_REQUEST} \s/+index\.html[\s?] [NC]
+    RewriteRule ^index\.html$ / [R=301,L,NE]
+
+    # =========================================================
+    # 3) Se existir arquivo/pasta REAL na raiz, não reescreve
+    # =========================================================
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # =========================================================
+    # 4) Não mexer em rotas internas
+    # =========================================================
+    RewriteRule ^(api|db|secure)(/|$) - [L]
+
+    # =========================================================
+    # 5) Fallback: tudo que sobrar vai para /public
+    # =========================================================
+    RewriteCond %{REQUEST_URI} !^/public/ [NC]
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>
+
+# =========================================================
+# SEGURANÇA: bloquear arquivos sensíveis
+# =========================================================
+
+<IfModule mod_authz_core.c>
+    <FilesMatch "(?i)^\.env">
+        Require all denied
+    </FilesMatch>
+
+    <FilesMatch "^\.">
+        Require all denied
+    </FilesMatch>
+</IfModule>
+
+<IfModule !mod_authz_core.c>
+    <FilesMatch "(?i)^\.env">
+        Order allow,deny
+        Deny from all
+    </FilesMatch>
+
+    <FilesMatch "^\.">
+        Order allow,deny
+        Deny from all
+    </FilesMatch>
+</IfModule>
