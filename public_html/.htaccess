@@ -2,6 +2,12 @@
     RewriteEngine On
 
     # =========================================================
+    # ROTA AMIGÁVEL DA VITRINE (garante funcionamento mesmo sem .htaccess em /public)
+    # /vitrine/nome-da-loja  ->  /public/vitrine.html?slug=nome-da-loja
+    # =========================================================
+    RewriteRule ^vitrine/([^/]+)/?$ public/vitrine.html?slug=$1 [L,QSA]
+
+    # =========================================================
     # 1) URL canônica: tira /public/ da URL (deixa URL limpa)
     # =========================================================
     RewriteCond %{THE_REQUEST} \s/+public/([^\s?]*) [NC]
