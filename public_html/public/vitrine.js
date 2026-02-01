@@ -56,9 +56,8 @@ async function iniciar() {
     try {
         const timestamp = new Date().getTime();
         const url = lojaSlug
-  const url = lojaSlug
-  ? `/api/dados_vitrine.php?slug=${encodeURIComponent(lojaSlug)}&t=${timestamp}`
-  : `/api/dados_vitrine.php?loja=${lojaId}&t=${timestamp}`;
+            ? `/api/dados_vitrine.php?slug=${encodeURIComponent(lojaSlug)}&t=${timestamp}`
+            : `/api/dados_vitrine.php?loja=${lojaId}&t=${timestamp}`;
         
         console.log("Buscando dados em:", url);
 
@@ -226,12 +225,8 @@ function renderProdutos(lista) {
     // Limpa o grid e renderiza os produtos
     grid.innerHTML = lista.map((p, index) => {
         let imgUrl = resolverImagem(p.imagem);
-        if (p.imagem) {
-            if (p.imagem.includes('uploads/')) {
-                imgUrl = p.imagem; 
-            } else {
-                let imgUrl = resolverImagem(item.imagem);
-            }
+        if (p.imagem && p.imagem.includes('uploads/')) {
+            imgUrl = p.imagem;
         }
 
         // Escapa aspas simples no nome e URL para evitar problemas
