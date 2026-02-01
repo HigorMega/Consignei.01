@@ -10,106 +10,127 @@ ini_set('display_errors', 0);
 require_once "../db/conexao.php";
 
 /* Helpers */
-function columnExists(PDO $pdo, string $table, string $column): bool {
+function getTableColumns(PDO $pdo, string $table): array {
     try {
-        $stmt = $pdo->prepare("SHOW COLUMNS FROM `$table` LIKE ?");
-        $stmt->execute([$column]);
-        return (bool) $stmt->fetch(PDO::FETCH_ASSOC);
+        $stmt = $pdo->prepare("SHOW COLUMNS FROM `$table`");
+        $stmt->execute();
+        return array_map(static fn($row) => $row['Field'], $stmt->fetchAll(PDO::FETCH_ASSOC));
     } catch (Exception $e) {
-        return false;
+        return [];
     }
 }
 
-function slugify(string $text): string {
-    $text = trim($text);
-    if ($text === '') return '';
-    if (function_exists('iconv')) {
-        $converted = @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $text);
-        if ($converted !== false) $text = $converted;
-    }
-    $text = strtolower($text);
-    $text = preg_replace('/[^a-z0-9]+/', '-', $text);
-    $text = trim($text, '-');
-    return $text;
-}
-
-function ensureUniqueSlug(PDO $pdo, string $baseSlug, int $maxTries = 50): string {
-    $slug = $baseSlug !== '' ? $baseSlug : ('loja-' . date('YmdHis'));
-    $try = 0;
-
-    while ($try < $maxTries) {
-        $candidate = $try === 0 ? $slug : ($slug . '-' . ($try + 1));
-        $stmt = $pdo->prepare("SELECT id FROM lojas WHERE slug = ? LIMIT 1");
-        $stmt->execute([$candidate]);
-        if (!$stmt->fetch(PDO::FETCH_ASSOC)) {
+function findFirstColumn(array $columns, array $candidates): ?string {
+    foreach ($candidates as $candidate) {
+        if (in_array($candidate, $columns, true)) {
             return $candidate;
         }
-        $try++;
     }
-    return $slug . '-' . bin2hex(random_bytes(2));
+    return null;
 }
+
+function respondJson(array $payload, array $debugInfo, bool $debug): void {
+    if ($debug) {
+        $payload['debug'] = $debugInfo;
+    }
+    echo json_encode($payload, JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+$debug = isset($_GET['debug']) && $_GET['debug'] === '1';
+$debugInfo = [
+    'database' => $db ?? null,
+    'host' => $host ?? null,
+    'inputs' => [
+        'slug' => $_GET['slug'] ?? null,
+        'loja' => $_GET['loja'] ?? null
+    ],
+    'columns' => [],
+    'pk' => [],
+    'fk' => [],
+    'queries' => []
+];
+
+$lojasColumns = getTableColumns($pdo, 'lojas');
+$debugInfo['columns']['lojas'] = $lojasColumns;
+$lojaPk = findFirstColumn($lojasColumns, ['id', 'loja_id', 'id_loja']);
+$debugInfo['pk']['lojas'] = $lojaPk;
+
+if (!$lojaPk) {
+    respondJson(['error' => 'Não foi possível identificar a PK da tabela lojas.'], $debugInfo, $debug);
+}
+
+$slugColumn = in_array('slug', $lojasColumns, true) ? 'slug' : null;
 
 $slug = $_GET['slug'] ?? '';
 $slug = strtolower(trim($slug));
 $slug = preg_replace('/[^a-z0-9-]/', '', $slug);
 
-$loja_id = 0;
-$loja_slug = null;
+$lojaId = 0;
+$lojaSlug = null;
 
-// 1) Preferência: slug (URL bonita /vitrine/<slug>)
-if (!empty($slug) && columnExists($pdo, 'lojas', 'slug')) {
+if (!empty($slug)) {
+    if (!$slugColumn) {
+        respondJson(['error' => 'Slug informado, mas a coluna slug não existe na tabela lojas.'], $debugInfo, $debug);
+    }
+
+    $sqlLojaSlug = "SELECT `$lojaPk` AS loja_pk, nome_loja, email, slug FROM lojas WHERE slug = ? LIMIT 1";
+    $debugInfo['queries'][] = ['sql' => $sqlLojaSlug, 'params' => [$slug]];
     try {
-        $stmt = $pdo->prepare("SELECT id, nome_loja, email, slug FROM lojas WHERE slug = ? LIMIT 1");
+        $stmt = $pdo->prepare($sqlLojaSlug);
         $stmt->execute([$slug]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
-
         if ($row) {
-            $loja_id = (int)$row['id'];
-            $loja_slug = $row['slug'] ?? null;
+            $lojaId = (int)$row['loja_pk'];
+            $lojaSlug = $row['slug'] ?? null;
         } else {
-            echo json_encode(['error' => 'Loja não encontrada'], JSON_UNESCAPED_UNICODE);
-            exit;
+            respondJson(['error' => 'Loja não encontrada'], $debugInfo, $debug);
         }
     } catch (Exception $e) {
-        echo json_encode(['error' => 'Erro ao localizar a loja'], JSON_UNESCAPED_UNICODE);
-        exit;
+        respondJson(['error' => 'Erro ao localizar a loja'], $debugInfo, $debug);
     }
 } else {
-    // 2) Fallback legado: ?loja=17
-    $loja_id = isset($_GET['loja']) ? (int)$_GET['loja'] : 0;
+    $lojaId = isset($_GET['loja']) ? (int)$_GET['loja'] : 0;
 }
 
-if ($loja_id <= 0) {
-    echo json_encode(['error' => 'Loja não informada'], JSON_UNESCAPED_UNICODE);
-    exit;
+if ($lojaId <= 0) {
+    respondJson(['error' => 'Loja não informada'], $debugInfo, $debug);
 }
 
 try {
-    // 1. Configurações
-    $stmtConfig = $pdo->prepare("SELECT * FROM configuracoes WHERE loja_id = ? LIMIT 1");
-    $stmtConfig->execute([$loja_id]);
-    $config = $stmtConfig->fetch(PDO::FETCH_ASSOC) ?: [];
+    $configColumns = getTableColumns($pdo, 'configuracoes');
+    $debugInfo['columns']['configuracoes'] = $configColumns;
+    $configFk = findFirstColumn($configColumns, ['loja_id', 'id_loja']);
+    $debugInfo['fk']['configuracoes'] = $configFk;
+    $config = [];
 
-    // 2. Dados da loja
-    if (columnExists($pdo, 'lojas', 'slug')) {
-        $stmtLoja = $pdo->prepare("SELECT id, nome_loja, email, slug FROM lojas WHERE id = ? LIMIT 1");
-    } else {
-        $stmtLoja = $pdo->prepare("SELECT id, nome_loja, email FROM lojas WHERE id = ? LIMIT 1");
+    if ($configFk) {
+        $sqlConfig = "SELECT * FROM configuracoes WHERE `$configFk` = ? LIMIT 1";
+        $debugInfo['queries'][] = ['sql' => $sqlConfig, 'params' => [$lojaId]];
+        $stmtConfig = $pdo->prepare($sqlConfig);
+        $stmtConfig->execute([$lojaId]);
+        $config = $stmtConfig->fetch(PDO::FETCH_ASSOC) ?: [];
     }
-    $stmtLoja->execute([$loja_id]);
+
+    $selectLojaFields = ["`$lojaPk` AS loja_pk", "nome_loja", "email"];
+    if ($slugColumn) {
+        $selectLojaFields[] = "slug";
+    }
+    $sqlLoja = "SELECT " . implode(', ', $selectLojaFields) . " FROM lojas WHERE `$lojaPk` = ? LIMIT 1";
+    $debugInfo['queries'][] = ['sql' => $sqlLoja, 'params' => [$lojaId]];
+    $stmtLoja = $pdo->prepare($sqlLoja);
+    $stmtLoja->execute([$lojaId]);
     $dadosLoja = $stmtLoja->fetch(PDO::FETCH_ASSOC);
 
     if (!$dadosLoja) {
-        echo json_encode(['error' => 'Loja não encontrada'], JSON_UNESCAPED_UNICODE);
-        exit;
+        respondJson(['error' => 'Loja não encontrada'], $debugInfo, $debug);
     }
 
-    $loja_slug = $loja_slug ?? ($dadosLoja['slug'] ?? null);
+    $lojaSlug = $lojaSlug ?? ($dadosLoja['slug'] ?? null);
 
-    // 3. Monta objeto final
     $lojaFinal = [
-        'id'        => (int)$loja_id,
-        'slug'      => $loja_slug,
+        'id'        => (int)$lojaId,
+        'slug'      => $lojaSlug,
         'nome_loja' => $config['nome_loja'] ?? $dadosLoja['nome_loja'] ?? 'Loja',
         'whatsapp'  => $config['whatsapp'] ?? '',
         'instagram' => $config['instagram'] ?? '',
@@ -117,21 +138,44 @@ try {
         'tema'      => $config['tema'] ?? 'rose'
     ];
 
-    // 4. Produtos
-    $sqlProd = "SELECT id, codigo_produto, nome, preco, imagem, categoria, quantidade
-                FROM produtos
-                WHERE loja_id = ? AND quantidade > 0
-                ORDER BY id DESC";
+    $produtosColumns = getTableColumns($pdo, 'produtos');
+    $debugInfo['columns']['produtos'] = $produtosColumns;
+    $produtoPk = findFirstColumn($produtosColumns, ['id', 'produto_id', 'id_produto']);
+    $produtoFk = findFirstColumn($produtosColumns, ['loja_id', 'id_loja']);
+    $debugInfo['pk']['produtos'] = $produtoPk;
+    $debugInfo['fk']['produtos'] = $produtoFk;
+
+    if (!$produtoPk || !$produtoFk) {
+        respondJson(['error' => 'Não foi possível identificar a chave de produtos para a loja.'], $debugInfo, $debug);
+    }
+
+    $selectProdutos = ["`$produtoPk` AS id"];
+    $camposProdutos = ['codigo_produto', 'nome', 'preco', 'imagem', 'categoria', 'quantidade'];
+    foreach ($camposProdutos as $campo) {
+        if (in_array($campo, $produtosColumns, true)) {
+            $selectProdutos[] = "`$campo`";
+        }
+    }
+
+    $where = ["`$produtoFk` = ?"];
+    if (in_array('quantidade', $produtosColumns, true)) {
+        $where[] = "quantidade > 0";
+    }
+    $sqlProd = "SELECT " . implode(', ', $selectProdutos)
+        . " FROM produtos WHERE " . implode(' AND ', $where)
+        . " ORDER BY `$produtoPk` DESC";
+
+    $debugInfo['queries'][] = ['sql' => $sqlProd, 'params' => [$lojaId]];
     $stmtProd = $pdo->prepare($sqlProd);
-    $stmtProd->execute([$loja_id]);
+    $stmtProd->execute([$lojaId]);
     $produtos = $stmtProd->fetchAll(PDO::FETCH_ASSOC);
 
-    echo json_encode([
+    respondJson([
         'loja' => $lojaFinal,
         'produtos' => $produtos
-    ], JSON_UNESCAPED_UNICODE);
+    ], $debugInfo, $debug);
 
 } catch (PDOException $e) {
-    echo json_encode(['error' => 'Erro DB: ' . $e->getMessage()], JSON_UNESCAPED_UNICODE);
+    respondJson(['error' => 'Erro DB: ' . $e->getMessage()], $debugInfo, $debug);
 }
 ?>

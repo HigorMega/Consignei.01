@@ -1,5 +1,6 @@
 <IfModule mod_rewrite.c>
     RewriteEngine On
+    RewriteBase /
 
     # =========================================================
     # ROTA AMIGÁVEL DA VITRINE (garante funcionamento mesmo sem .htaccess em /public)
@@ -29,7 +30,7 @@
     # =========================================================
     # 4) Não mexer em rotas internas
     # =========================================================
-    RewriteRule ^(api|db|secure)(/|$) - [L]
+    RewriteRule ^(api|db|secure|uploads)(/|$) - [L]
 
     # =========================================================
     # 5) Fallback: tudo que sobrar vai para /public
