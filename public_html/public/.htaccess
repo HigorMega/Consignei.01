@@ -7,7 +7,8 @@ Options -Indexes
     # ROTAS AMIGÁVEIS
     # =========================================================
     # /vitrine/nome-da-loja  ->  vitrine.html?slug=nome-da-loja
-    RewriteRule ^vitrine/([a-z0-9-]+)/?$ vitrine.html?slug=$1 [L,QSA]
+    # Aceita qualquer slug (a validação/sanitização ocorre no backend)
+    RewriteRule ^vitrine/([^/]+)/?$ vitrine.html?slug=$1 [L,QSA]
 
     # =========================================================
     # URL canônica: remove .html (redirect 301)
