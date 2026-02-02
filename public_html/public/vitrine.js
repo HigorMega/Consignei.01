@@ -245,16 +245,16 @@ function renderHeader() {
 function popularCategorias() {
     const cats = ['Todas', ...new Set(produtosData.map(p => p.categoria).filter(c => c))];
     // Popular dropdown do header
-    const lista = document.getElementById('dropdownListHeader');
+    const lista = document.getElementById('dropdownList');
     if(lista) {
         lista.innerHTML = cats.map(c => `
-            <div class="dropdown-item-header" onclick="filtrarCategoria('${c}')">${c}</div>
+            <div class="dropdown-item" onclick="filtrarCategoria('${c}')">${c}</div>
         `).join('');
     }
 }
 
-function toggleDropdownHeader() {
-    const d = document.getElementById('dropdownListHeader');
+function toggleDropdown() {
+    const d = document.getElementById('dropdownList');
     if(d) d.classList.toggle('show');
 }
 
@@ -262,7 +262,7 @@ function filtrarCategoria(cat) {
     categoriaAtual = cat;
     const catSel = document.getElementById('catSelected');
     if(catSel) catSel.innerText = cat;
-    const drop = document.getElementById('dropdownListHeader');
+    const drop = document.getElementById('dropdownList');
     if(drop) drop.classList.remove('show');
     filtrar();
 }
@@ -504,7 +504,7 @@ function fecharZoom() {
 document.addEventListener('keydown', (e) => {
     if(e.key === 'Escape') {
         // Fechar dropdown se estiver aberto
-        const drop = document.getElementById('dropdownListHeader');
+        const drop = document.getElementById('dropdownList');
         if(drop && drop.classList.contains('show')) {
             drop.classList.remove('show');
         }
@@ -513,8 +513,8 @@ document.addEventListener('keydown', (e) => {
 
 // Fechar dropdown ao clicar fora
 document.addEventListener('click', (e) => {
-    const dropdown = document.getElementById('dropdownListHeader');
-    const dropdownBtn = document.querySelector('.dropdown-btn-header');
+    const dropdown = document.getElementById('dropdownList');
+    const dropdownBtn = document.querySelector('.dropdown-btn');
     
     if(dropdown && dropdown.classList.contains('show')) {
         if(!dropdown.contains(e.target) && dropdownBtn && !dropdownBtn.contains(e.target)) {
