@@ -833,6 +833,10 @@ async function carregarConfiguracoes() {
         if(document.getElementById('cfgWhats') && dados.whatsapp) document.getElementById('cfgWhats').value = dados.whatsapp;
         if(document.getElementById('cfgVendedor')) document.getElementById('cfgVendedor').value = dados.nome_vendedor || dados.vendedor || '';
         if(document.getElementById('cfgInstagram') && dados.instagram) document.getElementById('cfgInstagram').value = dados.instagram;
+        if(document.getElementById('cfgEstiloFonte')) document.getElementById('cfgEstiloFonte').value = dados.estilo_fonte || 'classico';
+        if(document.getElementById('cfgCorFundo')) document.getElementById('cfgCorFundo').value = dados.cor_fundo || '#ffffff';
+        if(document.getElementById('cfgTexturaFundo')) document.getElementById('cfgTexturaFundo').value = dados.textura_fundo || '';
+        if(document.getElementById('cfgBannerAviso')) document.getElementById('cfgBannerAviso').value = dados.banner_aviso || '';
 
         // --- SLUG ---
         const slugInput = document.getElementById('cfgSlug');
@@ -860,6 +864,10 @@ async function salvarConfiguracoes(e) {
     const whatsapp = document.getElementById('cfgWhats')?.value || '';
     const vendedor = document.getElementById('cfgVendedor')?.value || '';
     const instagram = document.getElementById('cfgInstagram')?.value || '';
+    const estiloFonte = document.getElementById('cfgEstiloFonte')?.value || 'classico';
+    const corFundo = document.getElementById('cfgCorFundo')?.value || '#ffffff';
+    const texturaFundo = document.getElementById('cfgTexturaFundo')?.value || '';
+    const bannerAviso = document.getElementById('cfgBannerAviso')?.value || '';
 
     // Slug (opcional, mas recomendado)
     const slugEl = document.getElementById('cfgSlug');
@@ -877,7 +885,11 @@ async function salvarConfiguracoes(e) {
         whatsapp: whatsapp,
         vendedor: vendedor,
         instagram: instagram,
-        tema: tema
+        tema: tema,
+        estilo_fonte: estiloFonte,
+        cor_fundo: corFundo,
+        textura_fundo: texturaFundo,
+        banner_aviso: bannerAviso
     };
 
     // Envia slug somente se existir campo na tela (configurações.html ou aba Config) e se mudou

@@ -91,6 +91,7 @@ async function iniciar() {
             produtosData = data.produtos || [];
             
             aplicarTema(lojaInfo.tema);
+            aplicarPersonalizacaoVisual(lojaInfo);
             renderHeader();
             renderBannerAviso();
             carregarFavoritos();
@@ -145,6 +146,60 @@ function aplicarTema(tema) {
     else if (tema === 'blue') root.style.setProperty('--gold', '#2196f3');
     else if (tema === 'gold') root.style.setProperty('--gold', '#d4af37');
     else root.style.setProperty('--gold', '#d4af37');
+}
+
+function aplicarPersonalizacaoVisual(config) {
+    const root = document.documentElement;
+    const estiloFonte = (config.estilo_fonte || 'classico').toLowerCase();
+    const corFundo = config.cor_fundo || '#ffffff';
+    const textura = (config.textura_fundo || '').toLowerCase();
+
+    const estilosFonte = {
+        classico: {
+            titulo: "'Playfair Display', serif",
+            texto: "'Lato', sans-serif"
+        },
+        moderno: {
+            titulo: "'Montserrat', sans-serif",
+            texto: "'Montserrat', sans-serif"
+        },
+        romantico: {
+            titulo: "'Dancing Script', cursive",
+            texto: "'Alice', serif"
+        }
+    };
+
+    const texturaMap = {
+        marble: "linear-gradient(135deg, #fdfdfd 0%, #f1f1f1 45%, #f8f8f8 100%), repeating-linear-gradient(45deg, rgba(200,200,200,0.18) 0 2px, rgba(255,255,255,0) 2px 6px)",
+        silk: "linear-gradient(135deg, #fde2f3 0%, #f8cdda 45%, #fce7f3 100%)",
+        concrete: "linear-gradient(135deg, #d8d8d8 0%, #bdbdbd 100%), repeating-linear-gradient(0deg, rgba(0,0,0,0.04) 0 1px, rgba(255,255,255,0) 1px 3px)",
+        kraft: "linear-gradient(135deg, #d9c4a1 0%, #c9b089 100%), repeating-linear-gradient(45deg, rgba(255,255,255,0.18) 0 2px, rgba(0,0,0,0.06) 2px 4px)",
+        luxury: "linear-gradient(135deg, #d4af37 0%, #b8860b 45%, #0b0b0b 100%)"
+    };
+
+    const fonte = estilosFonte[estiloFonte] || estilosFonte.classico;
+    root.style.setProperty('--font-title', fonte.titulo);
+    root.style.setProperty('--font-body', fonte.texto);
+    root.style.setProperty('--bg-color', corFundo);
+
+    const texturaSelecionada = texturaMap[textura] || 'none';
+    root.style.setProperty('--bg-texture', texturaSelecionada);
+    root.style.setProperty('--bg-texture-size', texturaSelecionada === 'none' ? 'auto' : 'cover');
+    root.style.setProperty('--bg-texture-repeat', texturaSelecionada === 'none' ? 'no-repeat' : 'no-repeat');
+    root.style.setProperty('--bg-texture-position', 'center');
+
+    const contraste = calcularCorContraste(corFundo);
+    root.style.setProperty('--text-color', contraste);
+}
+
+function calcularCorContraste(hex) {
+    const cor = (hex || '').replace('#', '').trim();
+    if (cor.length !== 6) return '#111111';
+    const r = parseInt(cor.substring(0, 2), 16) / 255;
+    const g = parseInt(cor.substring(2, 4), 16) / 255;
+    const b = parseInt(cor.substring(4, 6), 16) / 255;
+    const luminancia = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    return luminancia < 0.5 ? '#ffffff' : '#222222';
 }
 
 function getFavoritosKey() {
