@@ -87,3 +87,37 @@ const slider = document.getElementById('slider');
     });
 
     startAutoPlay();
+
+    const testimonialNames = document.querySelectorAll('.testimonial-name');
+    testimonialNames.forEach((nameElement) => {
+        const displayName = nameElement.textContent.trim();
+        const dataHandle = nameElement.dataset.instagram?.trim();
+        let handle = dataHandle;
+
+        if (!handle && displayName.startsWith('@')) {
+            handle = displayName.slice(1);
+        }
+
+        if (!handle) {
+            return;
+        }
+
+        handle = handle.replace(/^@/, '');
+
+        const link = document.createElement('a');
+        link.className = 'testimonial-instagram';
+        link.href = `https://instagram.com/${handle}`;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+
+        const icon = document.createElement('i');
+        icon.className = 'ph ph-instagram-logo';
+        icon.setAttribute('aria-hidden', 'true');
+
+        const nameText = document.createElement('span');
+        nameText.className = 'testimonial-name-text';
+        nameText.textContent = displayName;
+
+        link.append(icon, nameText);
+        nameElement.replaceWith(link);
+    });
