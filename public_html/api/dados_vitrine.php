@@ -135,7 +135,11 @@ try {
         'whatsapp'  => $config['whatsapp'] ?? '',
         'instagram' => $config['instagram'] ?? '',
         'vendedor'  => $config['nome_vendedor'] ?? '',
-        'tema'      => $config['tema'] ?? 'rose'
+        'tema'      => $config['tema'] ?? 'rose',
+        'estilo_fonte' => $config['estilo_fonte'] ?? 'classico',
+        'cor_fundo' => $config['cor_fundo'] ?? '#ffffff',
+        'textura_fundo' => $config['textura_fundo'] ?? '',
+        'banner_aviso' => $config['banner_aviso'] ?? ''
     ];
 
     $produtosColumns = getTableColumns($pdo, 'produtos');

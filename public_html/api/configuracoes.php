@@ -74,6 +74,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $vendedor  = $data['vendedor'] ?? ''; // no banco é 'nome_vendedor'
     $instagram = $data['instagram'] ?? '';
     $tema      = $data['tema'] ?? 'marble';
+    $estiloFonte = $data['estilo_fonte'] ?? 'classico';
+    $corFundo = $data['cor_fundo'] ?? '#ffffff';
+    $texturaFundo = $data['textura_fundo'] ?? '';
+    $bannerAviso = $data['banner_aviso'] ?? '';
 
     // Slug: só altera se a chave existir no JSON
     $querAlterarSlug = array_key_exists('slug', $data);
@@ -112,16 +116,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     whatsapp = ?, 
                     nome_vendedor = ?, 
                     instagram = ?, 
-                    tema = ? 
+                    tema = ?,
+                    estilo_fonte = ?,
+                    cor_fundo = ?,
+                    textura_fundo = ?,
+                    banner_aviso = ?
                     WHERE loja_id = ?";
             $stmt = $pdo->prepare($sql);
-            $success = $stmt->execute([$nome_loja, $whatsapp, $vendedor, $instagram, $tema, $loja_id]);
+            $success = $stmt->execute([
+                $nome_loja,
+                $whatsapp,
+                $vendedor,
+                $instagram,
+                $tema,
+                $estiloFonte,
+                $corFundo,
+                $texturaFundo,
+                $bannerAviso,
+                $loja_id
+            ]);
         } else {
             // INSERT (igual ao original)
-            $sql = "INSERT INTO configuracoes (loja_id, nome_loja, whatsapp, nome_vendedor, instagram, tema) 
-                    VALUES (?, ?, ?, ?, ?, ?)";
+            $sql = "INSERT INTO configuracoes (loja_id, nome_loja, whatsapp, nome_vendedor, instagram, tema, estilo_fonte, cor_fundo, textura_fundo, banner_aviso) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
             $stmt = $pdo->prepare($sql);
-            $success = $stmt->execute([$loja_id, $nome_loja, $whatsapp, $vendedor, $instagram, $tema]);
+            $success = $stmt->execute([
+                $loja_id,
+                $nome_loja,
+                $whatsapp,
+                $vendedor,
+                $instagram,
+                $tema,
+                $estiloFonte,
+                $corFundo,
+                $texturaFundo,
+                $bannerAviso
+            ]);
         }
 
         if (!$success) {
