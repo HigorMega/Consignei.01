@@ -121,6 +121,21 @@
         input, select { padding: 12px; border: 1px solid var(--border); border-radius: 12px; font-size: 13px; width: 100%; background: #fdfdfd; color: #444; transition: 0.2s; }
         input:focus, select:focus { border-color: var(--primary); background: #fff; box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.1); }
         .box { background: var(--white); padding: 25px; border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 25px; border: 1px solid rgba(0,0,0,0.02); overflow: hidden; }
+
+        .theme-opt {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid #eee;
+            transition: transform 0.2s;
+        }
+        .theme-opt:hover,
+        .theme-opt.active,
+        .theme-opt.selected {
+            transform: scale(1.1);
+            border-color: var(--dark);
+        }
         
         .sidebar { width: 260px; background: var(--white); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 25px; flex-shrink: 0; height: 100vh; z-index: 1000; }
         .sidebar-header { margin-bottom: 30px; padding-left: 5px; }
