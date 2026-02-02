@@ -476,12 +476,24 @@
             align-items: center;
             gap: 10px;
         }
+        .footer-brand-logo {
+            width: 22px;
+            height: 22px;
+            object-fit: contain;
+        }
         .footer-brand-name {
             color: var(--primary);
             font-family: 'Cinzel', serif;
             font-size: 18px;
             letter-spacing: 0.6px;
         }
+        .footer-terms {
+            color: var(--primary);
+            font-size: 13px;
+            text-decoration: none;
+            transition: var(--transition);
+        }
+        .footer-terms:hover { text-decoration: underline; }
         .footer-brand p { color: #777; font-size: 13px; margin: 0; }
         .footer-instagram {
             display: inline-flex;
