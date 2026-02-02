@@ -440,7 +440,7 @@
 
         /* RODAPÉ */
         footer {
-            background: #0a0a0a;
+            background: #000;
             padding: 24px 8% 16px;
             border-top: 1px solid #222;
             width: 100%;
@@ -463,6 +463,18 @@
             color: #777;
             font-size: 13px;
             margin-bottom: 16px;
+            background: transparent;
+            border: 0;
+            box-shadow: none;
+            backdrop-filter: none;
+        }
+        .footer-legal::before,
+        .footer-legal::after {
+            content: none;
+        }
+        .footer-legal-title {
+            color: var(--primary);
+            font-weight: 600;
         }
         .footer-legal a {
             color: #888;
