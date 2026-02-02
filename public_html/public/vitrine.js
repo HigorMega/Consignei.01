@@ -354,10 +354,7 @@ function renderProdutos(lista) {
     
     // Limpa o grid e renderiza os produtos
     grid.innerHTML = lista.map((p, index) => {
-        let imgUrl = resolverImagem(p.imagem);
-        if (p.imagem && p.imagem.includes('uploads/')) {
-            imgUrl = p.imagem;
-        }
+        const imgUrl = resolverImagem(p.imagem);
 
         const badges = [];
         if (Number(p.quantidade) === 1) {
@@ -455,7 +452,7 @@ function atualizarCarrinho() {
         total += parseFloat(item.preco);
         let imgUrl = 'https://via.placeholder.com/50';
         if (item.imagem) {
-            imgUrl = item.imagem.includes('uploads/') ? item.imagem : CAMINHO_IMAGEM + item.imagem;
+            imgUrl = resolverImagem(item.imagem);
         }
 
         return `
