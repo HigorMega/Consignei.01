@@ -9,6 +9,12 @@
     RewriteRule ^vitrine/([^/]+)/?$ public/vitrine.html?slug=$1 [L,QSA]
 
     # =========================================================
+    # GARANTIR ACESSO ÀS IMAGENS DE UPLOAD (sem /public na URL)
+    # /uploads/arquivo.jpg -> /public/uploads/arquivo.jpg
+    # =========================================================
+    RewriteRule ^uploads/(.+)$ public/uploads/$1 [L,QSA]
+
+    # =========================================================
     # 1) URL canônica: tira /public/ da URL (deixa URL limpa)
     # =========================================================
     RewriteCond %{THE_REQUEST} \s/+public/([^\s?]*) [NC]
