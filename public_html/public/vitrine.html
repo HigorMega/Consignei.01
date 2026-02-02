@@ -89,6 +89,12 @@
             border-radius: 4px; outline: none; font-family: 'Montserrat', sans-serif; 
             width: 100%; font-size: 13px;
         }
+        .select-ordenacao {
+            padding: 10px 15px; border: 1px solid #eee; background: #f9f9f9;
+            border-radius: 4px; outline: none; font-family: 'Montserrat', sans-serif;
+            width: 100%; font-size: 12px; text-transform: uppercase; font-weight: 600;
+            color: var(--dark); cursor: pointer;
+        }
 
         /* GRID PRODUTOS (AJUSTADO PARA PC) */
         .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
@@ -119,6 +125,15 @@
             padding: 12px; font-size: 12px; font-weight: 600; letter-spacing: 1px; 
             border: none; border-radius: 4px; text-transform: uppercase; transition: var(--transition); 
         }
+        .badge-group { position: absolute; top: 12px; left: 12px; display: flex; flex-direction: column; gap: 6px; z-index: 2; }
+        .badge-tag { background: rgba(17,17,17,0.85); color: #fff; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; padding: 5px 8px; border-radius: 12px; }
+        .badge-tag.ultima { background: #d63031; }
+        .badge-tag.novo { background: #0984e3; }
+        .card-actions { position: absolute; top: 10px; right: 10px; display: flex; flex-direction: column; gap: 8px; z-index: 2; }
+        .card-action-btn { border: none; background: rgba(255,255,255,0.9); width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.08); transition: transform 0.2s, background 0.2s; color: var(--dark); }
+        .card-action-btn:hover { transform: scale(1.05); background: #fff; }
+        .card-action-btn.active { color: #e91e63; }
+        .banner-aviso { width: 100%; background: #fff3cd; color: #856404; padding: 12px 20px; font-size: 12px; text-align: center; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; border-bottom: 1px solid rgba(0,0,0,0.05); }
 
         /* CARRINHO */
         .fab-sacola { position: fixed; bottom: 30px; right: 30px; background: var(--gold); color: #fff; width: 60px; height: 60px; border-radius: 50%; display: flex; justify-content: center; align-items: center; box-shadow: 0 5px 20px rgba(0,0,0,0.2); cursor: pointer; z-index: 2000; transition: 0.3s; }
@@ -171,7 +186,7 @@
         /* CELULAR (MANTÉM 2 COLUNAS) */
         @media (max-width: 768px) { 
             .toolbar { flex-direction: column; padding: 15px; gap: 10px; } 
-            .dropdown-btn, .search-input { width: 100%; } 
+            .dropdown-btn, .search-input, .select-ordenacao { width: 100%; } 
             .container { padding: 15px 10px; }
             
             /* FORÇA 2 COLUNAS NO CELULAR */
@@ -217,6 +232,11 @@
         <div id="dropdownList" class="dropdown-list"></div>
     </div>
     <input type="text" id="inputBusca" class="search-input" placeholder="Buscar..." onkeyup="filtrar()">
+    <select id="ordenacao" class="select-ordenacao" onchange="filtrar()">
+        <option value="padrao">Padrão</option>
+        <option value="menor">Menor Preço</option>
+        <option value="maior">Maior Preço</option>
+    </select>
 </div>
 
 <div class="container">

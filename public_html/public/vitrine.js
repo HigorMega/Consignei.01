@@ -21,6 +21,7 @@ let carrinho = [];
 let lojaInfo = {};
 let categoriaAtual = 'Todas';
 let tentativas = 0; 
+let favoritos = new Set();
 
 const CAMINHO_IMAGEM = '/uploads/'; 
 
@@ -91,8 +92,11 @@ async function iniciar() {
             
             aplicarTema(lojaInfo.tema);
             renderHeader();
+            renderBannerAviso();
+            carregarFavoritos();
             popularCategorias();
             renderProdutos(produtosData);
+            abrirProdutoDaUrl();
 
             if (produtosData.length === 0) {
                 const msg = document.getElementById('msgVazio');
@@ -141,6 +145,73 @@ function aplicarTema(tema) {
     else if (tema === 'blue') root.style.setProperty('--gold', '#2196f3');
     else if (tema === 'gold') root.style.setProperty('--gold', '#d4af37');
     else root.style.setProperty('--gold', '#d4af37');
+}
+
+function getFavoritosKey() {
+    return `vitrine_favoritos_${lojaSlug || lojaId || 'default'}`;
+}
+
+function carregarFavoritos() {
+    try {
+        const dados = JSON.parse(localStorage.getItem(getFavoritosKey()) || '[]');
+        favoritos = new Set(dados);
+    } catch (error) {
+        favoritos = new Set();
+    }
+}
+
+function salvarFavoritos() {
+    localStorage.setItem(getFavoritosKey(), JSON.stringify(Array.from(favoritos)));
+}
+
+function isFavorito(id) {
+    return favoritos.has(Number(id));
+}
+
+function toggleFavorito(id) {
+    const numericId = Number(id);
+    if (favoritos.has(numericId)) {
+        favoritos.delete(numericId);
+    } else {
+        favoritos.add(numericId);
+    }
+    salvarFavoritos();
+    filtrar();
+}
+
+function renderBannerAviso() {
+    const bannerExistente = document.getElementById('bannerAviso');
+    if (!lojaInfo.banner_aviso) {
+        if (bannerExistente) bannerExistente.remove();
+        return;
+    }
+
+    const banner = bannerExistente || document.createElement('div');
+    banner.id = 'bannerAviso';
+    banner.className = 'banner-aviso';
+    banner.textContent = lojaInfo.banner_aviso;
+
+    if (!bannerExistente) {
+        document.body.prepend(banner);
+    }
+}
+
+function filtrarProdutosAtual() {
+    const input = document.getElementById('inputBusca');
+    const termo = input ? input.value.toLowerCase() : '';
+    return produtosData.filter(p => {
+        const matchNome = p.nome.toLowerCase().includes(termo);
+        const matchCat = categoriaAtual === 'Todas' || p.categoria === categoriaAtual;
+        return matchNome && matchCat;
+    });
+}
+
+function isProdutoNovo(produto) {
+    const valor = produto.novo ?? produto.novidade ?? produto.is_novo ?? produto.novo_produto;
+    if (typeof valor === 'string') {
+        return ['1', 'true', 'sim', 'yes'].includes(valor.toLowerCase());
+    }
+    return valor === 1 || valor === true;
 }
 
 function renderHeader() {
@@ -231,6 +302,16 @@ function renderProdutos(lista) {
             imgUrl = p.imagem;
         }
 
+        const badges = [];
+        if (Number(p.quantidade) === 1) {
+            badges.push('<span class="badge-tag ultima">Última Peça</span>');
+        }
+        if (isProdutoNovo(p)) {
+            badges.push('<span class="badge-tag novo">Novidade</span>');
+        }
+        const badgeHtml = badges.length ? `<div class="badge-group">${badges.join('')}</div>` : '';
+        const favoritoAtivo = isFavorito(p.id);
+
         // Escapa aspas simples no nome e URL para evitar problemas
         const nomeEscapado = p.nome.replace(/'/g, "&#39;");
         const urlEscapada = imgUrl.replace(/'/g, "&#39;");
@@ -238,6 +319,15 @@ function renderProdutos(lista) {
         return `
         <div class="card" style="animation-delay: ${(index % 6) * 0.05 + 0.1}s;">
             <div class="img-container">
+                ${badgeHtml}
+                <div class="card-actions">
+                    <button class="card-action-btn ${favoritoAtivo ? 'active' : ''}" aria-label="Favoritar" onclick="toggleFavorito(${p.id})">
+                        <i class="ph ${favoritoAtivo ? 'ph-heart-fill' : 'ph-heart'}"></i>
+                    </button>
+                    <button class="card-action-btn" aria-label="Compartilhar" onclick="compartilharProduto(${p.id})">
+                        <i class="ph ph-share-network"></i>
+                    </button>
+                </div>
                 <img src="${imgUrl}" onerror="this.src='https://via.placeholder.com/400x400?text=Sem+Foto'" loading="lazy" onclick="abrirZoom('${urlEscapada}')">
             </div>
             <div class="info">
@@ -251,13 +341,16 @@ function renderProdutos(lista) {
 }
 
 function filtrar() {
-    const input = document.getElementById('inputBusca');
-    const termo = input ? input.value.toLowerCase() : '';
-    const filtrados = produtosData.filter(p => {
-        const matchNome = p.nome.toLowerCase().includes(termo);
-        const matchCat = categoriaAtual === 'Todas' || p.categoria === categoriaAtual;
-        return matchNome && matchCat;
-    });
+    const filtrados = filtrarProdutosAtual();
+    const selectOrdenacao = document.getElementById('ordenacao');
+    const ordem = selectOrdenacao ? selectOrdenacao.value : 'padrao';
+
+    if (ordem === 'menor') {
+        filtrados.sort((a, b) => parseFloat(a.preco) - parseFloat(b.preco));
+    } else if (ordem === 'maior') {
+        filtrados.sort((a, b) => parseFloat(b.preco) - parseFloat(a.preco));
+    }
+
     renderProdutos(filtrados);
 }
 
@@ -268,7 +361,6 @@ function addCarrinho(id) {
     if(p) {
         carrinho.push(p);
         atualizarCarrinho();
-        toggleCarrinho(true);
         if(event && event.target) {
             const btn = event.target;
             const original = btn.innerText;
@@ -337,20 +429,53 @@ function toggleCarrinho(show) {
     }
 }
 
+function compartilharProduto(id) {
+    const shareUrl = new URL(window.location.href);
+    shareUrl.searchParams.set('produto', id);
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(shareUrl.toString())
+            .then(() => Swal.fire({ icon: 'success', title: 'Link copiado!', text: 'Compartilhe o produto com quem quiser.', timer: 1800, showConfirmButton: false }))
+            .catch(() => Swal.fire({ icon: 'error', title: 'Erro', text: 'Não foi possível copiar o link.' }));
+    } else {
+        const tempInput = document.createElement('input');
+        tempInput.value = shareUrl.toString();
+        document.body.appendChild(tempInput);
+        tempInput.select();
+        document.execCommand('copy');
+        tempInput.remove();
+        Swal.fire({ icon: 'success', title: 'Link copiado!', text: 'Compartilhe o produto com quem quiser.', timer: 1800, showConfirmButton: false });
+    }
+}
+
+function abrirProdutoDaUrl() {
+    const produtoId = params.get('produto');
+    if (!produtoId) return;
+
+    const produto = produtosData.find(item => String(item.id) === String(produtoId));
+    if (produto) {
+        const imagem = resolverImagem(produto.imagem);
+        abrirZoom(imagem);
+    }
+}
+
 function enviarWhatsApp() {
     if (carrinho.length === 0) {
         mostrarAlertaPadrao('Atenção', 'Sua sacola está vazia.');
         return;
     }
     
-    let msg = `*PEDIDO SITE (${lojaInfo.nome_loja || 'LOJA'}):*\n\n`;
+    let msg = `*${lojaInfo.nome_loja || 'LOJA'} - RECIBO DE COMPRA*\n\n`;
+    msg += `*Itens:*\n`;
     let total = 0;
-    carrinho.forEach(item => {
-        msg += `▪ ${item.nome} (${item.codigo_produto || 'S/C'})\n`;
-        total += parseFloat(item.preco);
+    carrinho.forEach((item, index) => {
+        const preco = parseFloat(item.preco);
+        total += preco;
+        const codigo = item.codigo_produto || 'S/C';
+        msg += `${index + 1}. ${item.nome} (Cód: ${codigo}) - ${preco.toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}\n`;
     });
-    msg += `\n*TOTAL: ${total.toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}*`;
-    msg += `\n\nAguardo confirmação.`;
+    msg += `\n*Total:* ${total.toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}\n`;
+    msg += `\nQual a melhor forma de pagamento para você?`;
     
     const cleanWhats = lojaInfo.whatsapp ? lojaInfo.whatsapp.replace(/\D/g, '') : '';
     if(!cleanWhats) {
