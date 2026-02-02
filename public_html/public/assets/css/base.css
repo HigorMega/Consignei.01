@@ -446,11 +446,19 @@
             width: 100%;
         }
 
+        .footer-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 24px;
+        }
+
         .footer-legal {
             display: flex;
             flex-wrap: wrap;
             flex-direction: column;
-            align-items: flex-start;
+            align-items: flex-end;
+            text-align: right;
             gap: 4px;
             color: #777;
             font-size: 13px;
@@ -531,7 +539,11 @@
 
         @media (max-width: 600px) {
             footer { padding: 18px 6% 12px; }
-            .footer-legal { justify-content: center; }
+            .footer-legal {
+                justify-content: center;
+                align-items: center;
+                text-align: center;
+            }
             .footer-brand { align-items: center; text-align: center; }
             .footer-bottom { text-align: center; }
             
