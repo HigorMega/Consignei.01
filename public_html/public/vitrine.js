@@ -201,7 +201,9 @@ function filtrarProdutosAtual() {
     const termo = input ? input.value.toLowerCase() : '';
     return produtosData.filter(p => {
         const matchNome = p.nome.toLowerCase().includes(termo);
-        const matchCat = categoriaAtual === 'Todas' || p.categoria === categoriaAtual;
+        const matchCat = categoriaAtual === 'Todas'
+            || (categoriaAtual === 'Favoritos' && isFavorito(p.id))
+            || p.categoria === categoriaAtual;
         return matchNome && matchCat;
     });
 }
@@ -243,7 +245,7 @@ function renderHeader() {
 }
 
 function popularCategorias() {
-    const cats = ['Todas', ...new Set(produtosData.map(p => p.categoria).filter(c => c))];
+    const cats = ['Todas', 'Favoritos', ...new Set(produtosData.map(p => p.categoria).filter(c => c))];
     // Popular dropdown do header
     const lista = document.getElementById('dropdownList');
     if(lista) {
@@ -322,7 +324,7 @@ function renderProdutos(lista) {
                 ${badgeHtml}
                 <div class="card-actions">
                     <button class="card-action-btn ${favoritoAtivo ? 'active' : ''}" aria-label="Favoritar" onclick="toggleFavorito(${p.id})">
-                        <i class="ph ${favoritoAtivo ? 'ph-heart-fill' : 'ph-heart'}"></i>
+                        <i class="ph ph-heart${favoritoAtivo ? ' ph-fill' : ''}"></i>
                     </button>
                     <button class="card-action-btn" aria-label="Compartilhar" onclick="compartilharProduto(${p.id})">
                         <i class="ph ph-share-network"></i>
