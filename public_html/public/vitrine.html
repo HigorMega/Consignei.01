@@ -24,6 +24,7 @@
             --filter-bg: rgba(255, 255, 255, 0.78);
             --filter-border: rgba(0, 0, 0, 0.08);
             --filter-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+            --badge-new: var(--gold);
         }
         
         body { 
@@ -189,8 +190,7 @@
         }
         .badge-group { position: absolute; top: 12px; left: 12px; display: flex; flex-direction: column; gap: 6px; z-index: 2; }
         .badge-tag { background: rgba(17,17,17,0.85); color: #fff; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; padding: 5px 8px; border-radius: 12px; }
-        .badge-tag.ultima { background: #d63031; }
-        .badge-tag.novo { background: #0984e3; }
+        .badge-tag.novo { background: var(--badge-new); }
         .card-actions { position: absolute; top: 10px; right: 10px; display: flex; flex-direction: column; gap: 8px; z-index: 2; }
         .card-action-btn { border: none; background: rgba(255,255,255,0.9); width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.08); transition: transform 0.2s, background 0.2s; color: var(--text-color); }
         .card-action-btn:hover { transform: scale(1.05); background: #fff; }
