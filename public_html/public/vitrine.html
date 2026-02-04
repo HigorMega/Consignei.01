@@ -12,12 +12,9 @@
         :root { 
             --gold: #c5a059; --dark: #111111; --bg-color: #ffffff;
             --text-color: #111111;
-            --bg-texture: none;
-            --bg-texture-size: cover;
-            --bg-texture-repeat: no-repeat;
-            --bg-texture-position: center;
-            --font-title: 'Playfair Display', serif;
-            --font-body: 'Lato', sans-serif;
+            --font-family: 'Playfair Display', serif;
+            --font-title: var(--font-family);
+            --font-body: var(--font-family);
             --card-bg: rgba(255,255,255,0.96);
             --header-bg: rgba(255, 255, 255, 0.95);
             --transition: all 0.3s ease;
@@ -27,17 +24,37 @@
         }
         
         body { 
-            font-family: var(--font-body); 
+            font-family: var(--font-family); 
             margin: 0; 
             color: var(--text-color); 
             min-height: 100vh; 
             padding-bottom: 80px;
             background-color: var(--bg-color);
-            background-image: var(--bg-texture);
-            background-size: var(--bg-texture-size);
-            background-position: var(--bg-texture-position);
             background-attachment: fixed;
-            background-repeat: var(--bg-texture-repeat);
+        }
+
+        body.texture-marble {
+            background-image:
+                radial-gradient(circle at 20% 20%, rgba(255,255,255,0.95) 0%, rgba(245,245,245,0.85) 45%, rgba(230,230,230,0.75) 100%),
+                linear-gradient(135deg, rgba(255,255,255,0.6) 0%, rgba(230,230,230,0.4) 100%);
+            background-size: cover;
+        }
+        body.texture-silk {
+            background-image:
+                linear-gradient(135deg, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0) 45%, rgba(255,255,255,0.35) 100%),
+                linear-gradient(315deg, rgba(255,255,255,0.25) 0%, rgba(255,255,255,0) 60%);
+            background-size: cover;
+        }
+        body.texture-concrete {
+            background-image:
+                linear-gradient(0deg, rgba(0,0,0,0.04) 0 1px, rgba(255,255,255,0) 1px 3px),
+                linear-gradient(90deg, rgba(255,255,255,0.06) 0 2px, rgba(255,255,255,0) 2px 4px),
+                linear-gradient(135deg, rgba(0,0,0,0.03) 0%, rgba(255,255,255,0.03) 100%);
+            background-size: 4px 4px, 6px 6px, cover;
+        }
+        body.texture-luxury {
+            background-image: linear-gradient(135deg, #d4af37 0%, #0b0b0b 100%);
+            background-size: cover;
         }
         
         * { box-sizing: border-box; outline: none; -webkit-tap-highlight-color: transparent; }

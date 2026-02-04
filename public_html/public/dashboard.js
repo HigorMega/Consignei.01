@@ -835,7 +835,7 @@ async function carregarConfiguracoes() {
         if(document.getElementById('cfgInstagram') && dados.instagram) document.getElementById('cfgInstagram').value = dados.instagram;
         if(document.getElementById('cfgEstiloFonte')) document.getElementById('cfgEstiloFonte').value = dados.estilo_fonte || 'classico';
         if(document.getElementById('cfgCorFundo')) document.getElementById('cfgCorFundo').value = dados.cor_fundo || '#ffffff';
-        if(document.getElementById('cfgTexturaFundo')) document.getElementById('cfgTexturaFundo').value = dados.textura_fundo || '';
+        if(document.getElementById('cfgTexturaFundo')) document.getElementById('cfgTexturaFundo').value = dados.textura_fundo || 'liso';
         if(document.getElementById('cfgBannerAviso')) document.getElementById('cfgBannerAviso').value = dados.banner_aviso || '';
 
         // --- SLUG ---
@@ -866,7 +866,7 @@ async function salvarConfiguracoes(e) {
     const instagram = document.getElementById('cfgInstagram')?.value || '';
     const estiloFonte = document.getElementById('cfgEstiloFonte')?.value || 'classico';
     const corFundo = document.getElementById('cfgCorFundo')?.value || '#ffffff';
-    const texturaFundo = document.getElementById('cfgTexturaFundo')?.value || '';
+    const texturaFundo = document.getElementById('cfgTexturaFundo')?.value || 'liso';
     const bannerAviso = document.getElementById('cfgBannerAviso')?.value || '';
 
     // Slug (opcional, mas recomendado)
