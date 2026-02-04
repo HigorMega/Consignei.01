@@ -100,6 +100,32 @@
             box-shadow: none; gap: 10px;
             backdrop-filter: blur(5px);
         }
+        .toolbar-filters {
+            display: flex;
+            gap: 10px;
+            width: 100%;
+            align-items: center;
+        }
+        .filter-toggle {
+            display: none;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            width: 100%;
+            padding: 12px 18px;
+            border-radius: 999px;
+            border: 1px solid var(--filter-border);
+            background: var(--filter-bg);
+            font-family: var(--font-body);
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: var(--text-color);
+            cursor: pointer;
+            box-shadow: var(--filter-shadow);
+            backdrop-filter: blur(10px);
+        }
         .dropdown-container { position: relative; width: 100%; }
         .dropdown-btn { 
             background: var(--filter-bg); border: 1px solid var(--filter-border); padding: 11px 18px; 
@@ -223,6 +249,9 @@
         /* CELULAR (MANTÉM 2 COLUNAS) */
         @media (max-width: 768px) { 
             .toolbar { flex-direction: column; padding: 15px; gap: 10px; } 
+            .toolbar-filters { flex-direction: column; align-items: stretch; display: none; } 
+            .toolbar-filters.is-open { display: flex; } 
+            .filter-toggle { display: flex; } 
             .dropdown-btn, .search-input, .select-ordenacao { width: 100%; } 
             .container { padding: 15px 10px; }
             
@@ -262,18 +291,23 @@
 </header>
 
 <div class="toolbar">
-    <div class="dropdown-container">
-        <button class="dropdown-btn" onclick="toggleDropdown()">
-            <span id="catSelected">Categorias</span> <i class="ph ph-caret-down"></i>
-        </button>
-        <div id="dropdownList" class="dropdown-list"></div>
+    <button class="filter-toggle" type="button" id="filterToggle" aria-expanded="false" aria-controls="toolbarFilters">
+        Filtros <i class="ph ph-funnel"></i>
+    </button>
+    <div class="toolbar-filters" id="toolbarFilters">
+        <input type="text" id="inputBusca" class="search-input" placeholder="Buscar..." onkeyup="filtrar()">
+        <div class="dropdown-container">
+            <button class="dropdown-btn" onclick="toggleDropdown()">
+                <span id="catSelected">Categorias</span> <i class="ph ph-caret-down"></i>
+            </button>
+            <div id="dropdownList" class="dropdown-list"></div>
+        </div>
+        <select id="ordenacao" class="select-ordenacao" onchange="filtrar()">
+            <option value="padrao">Padrão</option>
+            <option value="menor">Menor Preço</option>
+            <option value="maior">Maior Preço</option>
+        </select>
     </div>
-    <input type="text" id="inputBusca" class="search-input" placeholder="Buscar..." onkeyup="filtrar()">
-    <select id="ordenacao" class="select-ordenacao" onchange="filtrar()">
-        <option value="padrao">Padrão</option>
-        <option value="menor">Menor Preço</option>
-        <option value="maior">Maior Preço</option>
-    </select>
 </div>
 
 <div class="container">
