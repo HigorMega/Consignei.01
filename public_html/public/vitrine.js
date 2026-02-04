@@ -644,6 +644,7 @@ let scrollTimeout;
 window.addEventListener('scroll', () => {
     const header = document.getElementById('headerFixo');
     if(!header) return;
+    const body = document.body;
     
     const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
     
@@ -661,6 +662,10 @@ window.addEventListener('scroll', () => {
     // Garantir que o header apareça se estiver no topo
     if(scrollTop <= 50) {
         header.classList.remove('hidden');
+    }
+
+    if (body) {
+        body.classList.toggle('topbar-hidden', header.classList.contains('hidden'));
     }
 }, false);
 
