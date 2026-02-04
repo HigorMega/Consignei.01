@@ -21,6 +21,9 @@
             --overlay-bg: rgba(17, 17, 17, 0.55);
             --overlay-blur: 6px;
             --overlay-z: 4000;
+            --filter-bg: rgba(255, 255, 255, 0.78);
+            --filter-border: rgba(0, 0, 0, 0.08);
+            --filter-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
         }
         
         body { 
@@ -93,30 +96,40 @@
         .toolbar { 
             display: flex; justify-content: space-between; align-items: center; 
             padding: 15px 20px; max-width: 1400px; margin: 0 auto; 
-            background: var(--header-bg); position: sticky; top: 0; z-index: 1000; 
-            box-shadow: 0 4px 15px rgba(0,0,0,0.03); gap: 10px;
+            background: transparent; position: sticky; top: 0; z-index: 1000; 
+            box-shadow: none; gap: 10px;
             backdrop-filter: blur(5px);
         }
         .dropdown-container { position: relative; width: 100%; }
         .dropdown-btn { 
-            background: #f9f9f9; border: 1px solid #eee; padding: 10px 15px; 
+            background: var(--filter-bg); border: 1px solid var(--filter-border); padding: 11px 18px; 
             min-width: 180px; cursor: pointer; font-family: var(--font-body); 
             font-size: 12px; font-weight: 600; text-transform: uppercase; color: var(--text-color); 
-            display: flex; justify-content: space-between; align-items: center; border-radius: 4px; width: 100%;
+            display: flex; justify-content: space-between; align-items: center; border-radius: 999px; width: 100%;
+            box-shadow: var(--filter-shadow); backdrop-filter: blur(10px);
         }
-        .dropdown-list { display: none; position: absolute; top: 100%; left: 0; width: 100%; background: white; box-shadow: 0 5px 15px rgba(0,0,0,0.1); border: 1px solid #eee; z-index: 101; max-height: 300px; overflow-y: auto; }
+        .dropdown-list { display: none; position: absolute; top: calc(100% + 8px); left: 0; width: 100%; background: rgba(255,255,255,0.98); box-shadow: 0 12px 24px rgba(0,0,0,0.12); border: 1px solid rgba(0,0,0,0.08); z-index: 101; max-height: 300px; overflow-y: auto; border-radius: 16px; backdrop-filter: blur(10px); }
         .dropdown-list.show { display: block; }
-        .dropdown-item { padding: 12px 20px; cursor: pointer; font-size: 13px; border-bottom: 1px solid #f9f9f9; }
+        .dropdown-item { padding: 12px 20px; cursor: pointer; font-size: 13px; border-bottom: 1px solid rgba(0,0,0,0.04); }
+        .dropdown-item:last-child { border-bottom: none; }
         .search-input { 
-            padding: 10px 15px; border: 1px solid #eee; background: #f9f9f9; 
-            border-radius: 4px; outline: none; font-family: var(--font-body); 
+            padding: 11px 18px; border: 1px solid var(--filter-border); background: var(--filter-bg); 
+            border-radius: 999px; outline: none; font-family: var(--font-body); 
             width: 100%; font-size: 13px;
+            box-shadow: var(--filter-shadow); backdrop-filter: blur(10px);
         }
         .select-ordenacao {
-            padding: 10px 15px; border: 1px solid #eee; background: #f9f9f9;
-            border-radius: 4px; outline: none; font-family: var(--font-body);
+            padding: 11px 18px; border: 1px solid var(--filter-border); background: var(--filter-bg);
+            border-radius: 999px; outline: none; font-family: var(--font-body);
             width: 100%; font-size: 12px; text-transform: uppercase; font-weight: 600;
             color: var(--text-color); cursor: pointer;
+            box-shadow: var(--filter-shadow); backdrop-filter: blur(10px);
+        }
+        .dropdown-btn:focus-visible,
+        .search-input:focus-visible,
+        .select-ordenacao:focus-visible {
+            border-color: rgba(0, 0, 0, 0.18);
+            box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.08), var(--filter-shadow);
         }
 
         /* GRID PRODUTOS (AJUSTADO PARA PC) */
