@@ -139,7 +139,7 @@ try {
         'estilo_fonte' => $config['estilo_fonte'] ?? 'classico',
         'cor_fundo' => $config['cor_fundo'] ?? '#ffffff',
         'textura_fundo' => $config['textura_fundo'] ?? 'liso',
-        'banner_aviso' => $config['banner_aviso'] ?? ''
+        'banner_aviso' => mb_substr(trim((string)($config['banner_aviso'] ?? '')), 0, 120)
     ];
 
     $produtosColumns = getTableColumns($pdo, 'produtos');

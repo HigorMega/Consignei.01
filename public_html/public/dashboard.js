@@ -836,7 +836,7 @@ async function carregarConfiguracoes() {
         if(document.getElementById('cfgEstiloFonte')) document.getElementById('cfgEstiloFonte').value = dados.estilo_fonte || 'classico';
         if(document.getElementById('cfgCorFundo')) document.getElementById('cfgCorFundo').value = dados.cor_fundo || '#ffffff';
         if(document.getElementById('cfgTexturaFundo')) document.getElementById('cfgTexturaFundo').value = dados.textura_fundo || 'liso';
-        if(document.getElementById('cfgBannerAviso')) document.getElementById('cfgBannerAviso').value = dados.banner_aviso || '';
+        if(document.getElementById('cfgBannerAviso')) document.getElementById('cfgBannerAviso').value = (dados.banner_aviso || '').trim();
 
         // --- SLUG ---
         const slugInput = document.getElementById('cfgSlug');
@@ -867,7 +867,9 @@ async function salvarConfiguracoes(e) {
     const estiloFonte = document.getElementById('cfgEstiloFonte')?.value || 'classico';
     const corFundo = document.getElementById('cfgCorFundo')?.value || '#ffffff';
     const texturaFundo = document.getElementById('cfgTexturaFundo')?.value || 'liso';
-    const bannerAviso = document.getElementById('cfgBannerAviso')?.value || '';
+    const bannerAvisoInput = document.getElementById('cfgBannerAviso');
+    const bannerAviso = (bannerAvisoInput?.value || '').trim().slice(0, 120);
+    if (bannerAvisoInput) bannerAvisoInput.value = bannerAviso;
 
     // Slug (opcional, mas recomendado)
     const slugEl = document.getElementById('cfgSlug');

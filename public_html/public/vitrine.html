@@ -26,6 +26,7 @@
             --filter-border: rgba(0, 0, 0, 0.08);
             --filter-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
             --badge-new: var(--gold);
+            --topbar-height: 58px;
         }
         
         body { 
@@ -33,7 +34,7 @@
             margin: 0; 
             color: var(--text-color); 
             min-height: 100vh; 
-            padding-bottom: 80px;
+            padding: var(--topbar-height) 0 80px;
             background-color: var(--bg-color);
             background-attachment: fixed;
         }
@@ -82,23 +83,84 @@
         }
         @keyframes spin { to { transform: rotate(360deg); } }
 
-        /* HEADER */
-        header { padding: 30px 20px 10px; text-align: center; max-width: 1400px; margin: 0 auto; }
-        header h1 { 
-            font-family: var(--font-title); font-size: clamp(20px, 5vw, 36px); 
-            margin: 0 0 10px 0; letter-spacing: 2px; color: var(--text-color); 
-            text-transform: uppercase; font-weight: 700; 
-            text-shadow: 0 2px 10px rgba(255,255,255,0.8);
+        /* TOPBAR */
+        .topbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: var(--topbar-height);
+            background: var(--dark);
+            color: #fff;
+            z-index: 3000;
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            gap: 16px;
+            transition: transform 0.3s ease;
         }
-        .header-info { display: flex; justify-content: center; align-items: center; gap: 15px; flex-wrap: wrap; margin-bottom: 15px; }
-        .info-base { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--surface-text-color); text-transform: uppercase; letter-spacing: 1px; font-weight: 600; text-decoration: none; background: rgba(255,255,255,0.8); padding: 5px 10px; border-radius: 20px; }
-        .info-base i { font-size: 16px; color: var(--gold); }
+        .topbar.hidden { transform: translateY(-100%); }
+        .topbar-left,
+        .topbar-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .topbar-left {
+            min-width: 0;
+            flex: 0 1 auto;
+            gap: 12px;
+        }
+        .topbar-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 0;
+        }
+        .topbar-brand span {
+            font-family: var(--font-title);
+            font-weight: 700;
+            font-size: 16px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 220px;
+        }
+        .topbar-center {
+            flex: 1;
+            text-align: center;
+            font-size: 12px;
+            letter-spacing: 0.6px;
+            text-transform: uppercase;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.85);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .topbar-center.is-empty { opacity: 0; }
+        .topbar-right a {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.08);
+            color: #fff;
+            text-decoration: none;
+            transition: transform 0.2s ease, background 0.2s ease;
+        }
+        .topbar-right a:hover { transform: translateY(-1px); background: rgba(255,255,255,0.16); }
+        .topbar-right a i { font-size: 18px; }
 
         /* TOOLBAR */
         .toolbar { 
             display: flex; justify-content: space-between; align-items: center; 
             padding: 15px 20px; max-width: 1400px; margin: 0 auto; 
-            background: transparent; position: sticky; top: 0; z-index: 1000; 
+            background: transparent; position: sticky; top: calc(var(--topbar-height) + 5px); z-index: 1000; 
             box-shadow: none; gap: 10px;
             backdrop-filter: none;
         }
@@ -197,7 +259,16 @@
         .card-action-btn:hover { transform: scale(1.05); background: #fff; }
         .card-action-btn.active { color: #e91e63; }
         .card-action-btn.active i { color: #e91e63; }
-        .banner-aviso { width: 100%; background: #fff3cd; color: #856404; padding: 12px 20px; font-size: 12px; text-align: center; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; border-bottom: 1px solid rgba(0,0,0,0.05); }
+        /* FOOTER */
+        footer {
+            background: #f9f9f9;
+            padding: 20px;
+            text-align: center;
+            font-size: 12px;
+            color: #777;
+            margin-top: 40px;
+        }
+        footer a { color: inherit; text-decoration: none; font-weight: 600; }
 
         /* CARRINHO */
         .fab-sacola { position: fixed; bottom: 30px; right: 30px; background: var(--gold); color: #fff; width: 60px; height: 60px; border-radius: 50%; display: flex; justify-content: center; align-items: center; box-shadow: 0 5px 20px rgba(0,0,0,0.2); cursor: pointer; z-index: 2000; transition: 0.3s; }
@@ -249,6 +320,12 @@
 
         /* CELULAR (MANTÉM 2 COLUNAS) */
         @media (max-width: 768px) { 
+            .topbar {
+                padding: 0 14px;
+                gap: 10px;
+            }
+            .topbar-brand span { max-width: 140px; font-size: 14px; }
+            .topbar-center { display: none; }
             .toolbar { flex-direction: column; padding: 15px; gap: 10px; } 
             .toolbar-filters { flex-direction: column; align-items: stretch; display: none; } 
             .toolbar-filters.is-open { display: flex; } 
@@ -286,10 +363,23 @@
     </div>
 </div>
 
-<header>
-    <h1 id="lojaTitulo">Minha Loja</h1>
-    <div id="headerRedes" class="header-info"></div>
-</header>
+<div class="topbar" id="headerFixo">
+    <div class="topbar-left">
+        <div class="topbar-brand">
+            <i class="ph-fill ph-diamonds-four" style="color: var(--gold); font-size: 24px;"></i>
+            <span id="headerNomeLoja">Minha Loja</span>
+        </div>
+    </div>
+    <div class="topbar-center is-empty" id="topbarAviso"></div>
+    <div class="topbar-right">
+        <a id="headerInstagram" href="#" target="_blank" rel="noopener" aria-label="Instagram da loja" style="display:none;">
+            <i class="ph ph-instagram-logo"></i>
+        </a>
+        <a id="headerWhatsapp" href="#" target="_blank" rel="noopener" aria-label="WhatsApp da loja" style="display:none;">
+            <i class="ph ph-whatsapp-logo"></i>
+        </a>
+    </div>
+</div>
 
 <div class="toolbar">
     <button class="filter-toggle" type="button" id="filterToggle" aria-expanded="false" aria-controls="toolbarFilters">
@@ -341,6 +431,11 @@
         </div>
     </div>
 </div>
+
+<footer>
+    <div>© 2026 <span id="footerNomeLoja">Minha Loja</span>. Todos os direitos reservados.</div>
+    <div>Tecnologia e Segurança: Consignei</div>
+</footer>
 
 <script src="/js/modal.js"></script>
 <script src="/vitrine.js"></script>

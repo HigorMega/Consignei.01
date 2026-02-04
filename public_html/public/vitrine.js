@@ -282,20 +282,11 @@ function toggleFavorito(id) {
 }
 
 function renderBannerAviso() {
-    const bannerExistente = document.getElementById('bannerAviso');
-    if (!lojaInfo.banner_aviso) {
-        if (bannerExistente) bannerExistente.remove();
-        return;
-    }
-
-    const banner = bannerExistente || document.createElement('div');
-    banner.id = 'bannerAviso';
-    banner.className = 'banner-aviso';
-    banner.textContent = lojaInfo.banner_aviso;
-
-    if (!bannerExistente) {
-        document.body.prepend(banner);
-    }
+    const avisoEl = document.getElementById('topbarAviso');
+    if (!avisoEl) return;
+    const texto = (lojaInfo.banner_aviso || '').trim();
+    avisoEl.textContent = texto;
+    avisoEl.classList.toggle('is-empty', !texto);
 }
 
 function filtrarProdutosAtual() {
@@ -347,12 +338,11 @@ function parseDataProduto(valor) {
 function renderHeader() {
     if(lojaInfo.nome_loja) {
         document.title = lojaInfo.nome_loja;
-        const tituloEl = document.getElementById('lojaTitulo');
-        if(tituloEl) tituloEl.innerText = lojaInfo.nome_loja;
-        
-        // Atualizar nome no header fixo
         const headerNome = document.getElementById('headerNomeLoja');
         if(headerNome) headerNome.innerText = lojaInfo.nome_loja;
+
+        const footerNome = document.getElementById('footerNomeLoja');
+        if(footerNome) footerNome.innerText = lojaInfo.nome_loja;
     }
     
     // Atualizar ícones do WhatsApp e Instagram no header
