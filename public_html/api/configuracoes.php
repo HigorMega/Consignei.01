@@ -76,7 +76,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $tema      = $data['tema'] ?? 'marble';
     $estiloFonte = $data['estilo_fonte'] ?? 'classico';
     $corFundo = $data['cor_fundo'] ?? '#ffffff';
-    $texturaFundo = $data['textura_fundo'] ?? '';
+    $texturaFundo = $data['textura_fundo'] ?? 'liso';
     $bannerAviso = $data['banner_aviso'] ?? '';
 
     // Slug: só altera se a chave existir no JSON

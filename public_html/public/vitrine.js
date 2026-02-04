@@ -24,6 +24,8 @@ let tentativas = 0;
 let favoritos = new Set();
 
 const CAMINHO_IMAGEM = '/uploads/'; 
+const CATEGORIA_NOVIDADES = '🔥 Novidades';
+const TEXTURA_CLASSES = ['texture-marble', 'texture-silk', 'texture-concrete', 'texture-luxury'];
 
 // --- SEGURANÇA ---
 setTimeout(() => {
@@ -150,46 +152,69 @@ function aplicarTema(tema) {
 
 function aplicarPersonalizacaoVisual(config) {
     const root = document.documentElement;
+    const body = document.body;
     const estiloFonte = (config.estilo_fonte || 'classico').toLowerCase();
     const corFundo = config.cor_fundo || '#ffffff';
     const textura = (config.textura_fundo || '').toLowerCase();
 
     const estilosFonte = {
         classico: {
-            titulo: "'Playfair Display', serif",
-            texto: "'Lato', sans-serif"
+            familia: "'Playfair Display', serif",
+            google: 'https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&display=swap'
         },
         moderno: {
-            titulo: "'Montserrat', sans-serif",
-            texto: "'Montserrat', sans-serif"
+            familia: "'Montserrat', sans-serif",
+            google: 'https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700&display=swap'
         },
         romantico: {
-            titulo: "'Dancing Script', cursive",
-            texto: "'Alice', serif"
+            familia: "'Dancing Script', cursive",
+            google: 'https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;600;700&display=swap'
         }
     };
 
-    const texturaMap = {
-        marble: "linear-gradient(135deg, #fdfdfd 0%, #f1f1f1 45%, #f8f8f8 100%), repeating-linear-gradient(45deg, rgba(200,200,200,0.18) 0 2px, rgba(255,255,255,0) 2px 6px)",
-        silk: "linear-gradient(135deg, #fde2f3 0%, #f8cdda 45%, #fce7f3 100%)",
-        concrete: "linear-gradient(135deg, #d8d8d8 0%, #bdbdbd 100%), repeating-linear-gradient(0deg, rgba(0,0,0,0.04) 0 1px, rgba(255,255,255,0) 1px 3px)",
-        kraft: "linear-gradient(135deg, #d9c4a1 0%, #c9b089 100%), repeating-linear-gradient(45deg, rgba(255,255,255,0.18) 0 2px, rgba(0,0,0,0.06) 2px 4px)",
-        luxury: "linear-gradient(135deg, #d4af37 0%, #b8860b 45%, #0b0b0b 100%)"
-    };
-
     const fonte = estilosFonte[estiloFonte] || estilosFonte.classico;
-    root.style.setProperty('--font-title', fonte.titulo);
-    root.style.setProperty('--font-body', fonte.texto);
+    carregarFonteGoogle(fonte.google);
+    root.style.setProperty('--font-family', fonte.familia);
+    root.style.setProperty('--font-title', fonte.familia);
+    root.style.setProperty('--font-body', fonte.familia);
     root.style.setProperty('--bg-color', corFundo);
 
-    const texturaSelecionada = texturaMap[textura] || 'none';
-    root.style.setProperty('--bg-texture', texturaSelecionada);
-    root.style.setProperty('--bg-texture-size', texturaSelecionada === 'none' ? 'auto' : 'cover');
-    root.style.setProperty('--bg-texture-repeat', texturaSelecionada === 'none' ? 'no-repeat' : 'no-repeat');
-    root.style.setProperty('--bg-texture-position', 'center');
+    if (body) {
+        body.classList.remove(...TEXTURA_CLASSES);
+        const texturaClasse = obterClasseTextura(textura);
+        if (texturaClasse) {
+            body.classList.add(texturaClasse);
+        }
+    }
 
     const contraste = calcularCorContraste(corFundo);
     root.style.setProperty('--text-color', contraste);
+}
+
+function carregarFonteGoogle(url) {
+    if (!url) return;
+    const existing = document.getElementById('vitrineGoogleFont');
+    if (existing && existing.getAttribute('href') === url) return;
+    const link = existing || document.createElement('link');
+    link.id = 'vitrineGoogleFont';
+    link.rel = 'stylesheet';
+    link.href = url;
+    if (!existing) document.head.appendChild(link);
+}
+
+function obterClasseTextura(valor) {
+    switch (valor) {
+        case 'marble':
+            return 'texture-marble';
+        case 'silk':
+            return 'texture-silk';
+        case 'concrete':
+            return 'texture-concrete';
+        case 'luxury':
+            return 'texture-luxury';
+        default:
+            return '';
+    }
 }
 
 function calcularCorContraste(hex) {
@@ -258,17 +283,43 @@ function filtrarProdutosAtual() {
         const matchNome = p.nome.toLowerCase().includes(termo);
         const matchCat = categoriaAtual === 'Todas'
             || (categoriaAtual === 'Favoritos' && isFavorito(p.id))
+            || (categoriaAtual === CATEGORIA_NOVIDADES && isProdutoRecente(p))
             || p.categoria === categoriaAtual;
         return matchNome && matchCat;
     });
 }
 
 function isProdutoNovo(produto) {
+    if (isProdutoRecente(produto)) {
+        return true;
+    }
     const valor = produto.novo ?? produto.novidade ?? produto.is_novo ?? produto.novo_produto;
     if (typeof valor === 'string') {
         return ['1', 'true', 'sim', 'yes'].includes(valor.toLowerCase());
     }
     return valor === 1 || valor === true;
+}
+
+function isProdutoRecente(produto) {
+    const dataProduto = parseDataProduto(produto?.data_criacao);
+    if (!dataProduto) return false;
+    const diffMs = Date.now() - dataProduto.getTime();
+    const limite = 48 * 60 * 60 * 1000;
+    return diffMs >= 0 && diffMs < limite;
+}
+
+function parseDataProduto(valor) {
+    if (!valor) return null;
+    if (typeof valor === 'number') {
+        const data = new Date(valor);
+        return isNaN(data.getTime()) ? null : data;
+    }
+    if (typeof valor === 'string') {
+        const texto = valor.replace(' ', 'T');
+        const data = new Date(texto);
+        return isNaN(data.getTime()) ? null : data;
+    }
+    return null;
 }
 
 function renderHeader() {
@@ -300,7 +351,7 @@ function renderHeader() {
 }
 
 function popularCategorias() {
-    const cats = ['Todas', 'Favoritos', ...new Set(produtosData.map(p => p.categoria).filter(c => c))];
+    const cats = ['Todas', CATEGORIA_NOVIDADES, 'Favoritos', ...new Set(produtosData.map(p => p.categoria).filter(c => c))];
     // Popular dropdown do header
     const lista = document.getElementById('dropdownList');
     if(lista) {
@@ -361,7 +412,7 @@ function renderProdutos(lista) {
             badges.push('<span class="badge-tag ultima">Última Peça</span>');
         }
         if (isProdutoNovo(p)) {
-            badges.push('<span class="badge-tag novo">Novidade</span>');
+            badges.push('<span class="badge-tag novo">NOVIDADE</span>');
         }
         const badgeHtml = badges.length ? `<div class="badge-group">${badges.join('')}</div>` : '';
         const favoritoAtivo = isFavorito(p.id);

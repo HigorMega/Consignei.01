@@ -138,7 +138,7 @@ try {
         'tema'      => $config['tema'] ?? 'rose',
         'estilo_fonte' => $config['estilo_fonte'] ?? 'classico',
         'cor_fundo' => $config['cor_fundo'] ?? '#ffffff',
-        'textura_fundo' => $config['textura_fundo'] ?? '',
+        'textura_fundo' => $config['textura_fundo'] ?? 'liso',
         'banner_aviso' => $config['banner_aviso'] ?? ''
     ];
 
@@ -154,7 +154,7 @@ try {
     }
 
     $selectProdutos = ["`$produtoPk` AS id"];
-    $camposProdutos = ['codigo_produto', 'nome', 'preco', 'imagem', 'categoria', 'quantidade'];
+    $camposProdutos = ['codigo_produto', 'nome', 'preco', 'imagem', 'categoria', 'quantidade', 'data_criacao'];
     foreach ($camposProdutos as $campo) {
         if (in_array($campo, $produtosColumns, true)) {
             $selectProdutos[] = "`$campo`";
