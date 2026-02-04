@@ -77,7 +77,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $estiloFonte = $data['estilo_fonte'] ?? 'classico';
     $corFundo = $data['cor_fundo'] ?? '#ffffff';
     $texturaFundo = $data['textura_fundo'] ?? 'liso';
-    $bannerAviso = $data['banner_aviso'] ?? '';
+    $bannerAviso = trim((string)($data['banner_aviso'] ?? ''));
+    if (mb_strlen($bannerAviso) > 120) {
+        $bannerAviso = mb_substr($bannerAviso, 0, 120);
+    }
 
     // Slug: só altera se a chave existir no JSON
     $querAlterarSlug = array_key_exists('slug', $data);
