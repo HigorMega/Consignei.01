@@ -98,7 +98,7 @@
             padding: 15px 20px; max-width: 1400px; margin: 0 auto; 
             background: transparent; position: sticky; top: 0; z-index: 1000; 
             box-shadow: none; gap: 10px;
-            backdrop-filter: blur(5px);
+            backdrop-filter: none;
         }
         .toolbar-filters {
             display: flex;
@@ -124,7 +124,7 @@
             color: var(--text-color);
             cursor: pointer;
             box-shadow: var(--filter-shadow);
-            backdrop-filter: blur(10px);
+            backdrop-filter: none;
         }
         .dropdown-container { position: relative; width: 100%; }
         .dropdown-btn { 
@@ -132,9 +132,9 @@
             min-width: 180px; cursor: pointer; font-family: var(--font-body); 
             font-size: 12px; font-weight: 600; text-transform: uppercase; color: var(--text-color); 
             display: flex; justify-content: space-between; align-items: center; border-radius: 999px; width: 100%;
-            box-shadow: var(--filter-shadow); backdrop-filter: blur(10px);
+            box-shadow: var(--filter-shadow); backdrop-filter: none;
         }
-        .dropdown-list { display: none; position: absolute; top: calc(100% + 8px); left: 0; width: 100%; background: rgba(255,255,255,0.98); box-shadow: 0 12px 24px rgba(0,0,0,0.12); border: 1px solid rgba(0,0,0,0.08); z-index: 101; max-height: 300px; overflow-y: auto; border-radius: 16px; backdrop-filter: blur(10px); }
+        .dropdown-list { display: none; position: absolute; top: calc(100% + 8px); left: 0; width: 100%; background: rgba(255,255,255,0.98); box-shadow: 0 12px 24px rgba(0,0,0,0.12); border: 1px solid rgba(0,0,0,0.08); z-index: 101; max-height: 300px; overflow-y: auto; border-radius: 16px; backdrop-filter: none; }
         .dropdown-list.show { display: block; }
         .dropdown-item { padding: 12px 20px; cursor: pointer; font-size: 13px; border-bottom: 1px solid rgba(0,0,0,0.04); }
         .dropdown-item:last-child { border-bottom: none; }
@@ -142,14 +142,14 @@
             padding: 11px 18px; border: 1px solid var(--filter-border); background: var(--filter-bg); 
             border-radius: 999px; outline: none; font-family: var(--font-body); 
             width: 100%; font-size: 13px;
-            box-shadow: var(--filter-shadow); backdrop-filter: blur(10px);
+            box-shadow: var(--filter-shadow); backdrop-filter: none;
         }
         .select-ordenacao {
             padding: 11px 18px; border: 1px solid var(--filter-border); background: var(--filter-bg);
             border-radius: 999px; outline: none; font-family: var(--font-body);
             width: 100%; font-size: 12px; text-transform: uppercase; font-weight: 600;
             color: var(--text-color); cursor: pointer;
-            box-shadow: var(--filter-shadow); backdrop-filter: blur(10px);
+            box-shadow: var(--filter-shadow); backdrop-filter: none;
         }
         .dropdown-btn:focus-visible,
         .search-input:focus-visible,
