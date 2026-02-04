@@ -24,7 +24,7 @@ let tentativas = 0;
 let favoritos = new Set();
 
 const CAMINHO_IMAGEM = '/uploads/'; 
-const CATEGORIA_NOVIDADES = '🔥 Novidades';
+const CATEGORIA_NOVIDADES = 'Novidades';
 const TEXTURA_CLASSES = ['texture-marble', 'texture-silk', 'texture-concrete', 'texture-luxury'];
 
 // --- SEGURANÇA ---
