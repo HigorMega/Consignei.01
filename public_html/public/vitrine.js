@@ -42,11 +42,23 @@ document.addEventListener('DOMContentLoaded', () => {
     if(qtdEl) {
         qtdEl.style.display = 'none';
     }
+    configurarFiltroMobile();
     iniciar();
 });
 
 function mostrarAlertaPadrao(titulo, mensagem, tipo = 'error') {
     Swal.fire({ icon: tipo, title: titulo, text: mensagem });
+}
+
+function configurarFiltroMobile() {
+    const toggle = document.getElementById('filterToggle');
+    const filters = document.getElementById('toolbarFilters');
+    if (!toggle || !filters) return;
+
+    toggle.addEventListener('click', () => {
+        const isOpen = filters.classList.toggle('is-open');
+        toggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    });
 }
 
 async function iniciar() {
