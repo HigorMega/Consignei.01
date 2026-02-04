@@ -154,12 +154,22 @@ function esconderLoading() {
 
 function aplicarTema(tema) {
     const root = document.documentElement;
-    if (tema === 'rose') root.style.setProperty('--gold', '#e91e63');
-    else if (tema === 'dark') { root.style.setProperty('--gold', '#333'); root.style.setProperty('--header-bg', '#fff'); }
-    else if (tema === 'marble') root.style.setProperty('--gold', '#7f8c8d');
-    else if (tema === 'blue') root.style.setProperty('--gold', '#2196f3');
-    else if (tema === 'gold') root.style.setProperty('--gold', '#d4af37');
-    else root.style.setProperty('--gold', '#d4af37');
+    const temas = {
+        rose: '#e91e63',
+        dark: '#333',
+        marble: '#7f8c8d',
+        blue: '#2196f3',
+        gold: '#d4af37'
+    };
+    const corTema = temas[tema] || temas.gold;
+    root.style.setProperty('--gold', corTema);
+    root.style.setProperty('--badge-new', corTema);
+    if (tema === 'dark') {
+        root.style.setProperty('--header-bg', '#fff');
+    }
+    if (document.body) {
+        document.body.dataset.tema = tema || 'gold';
+    }
 }
 
 function aplicarPersonalizacaoVisual(config) {
@@ -420,9 +430,6 @@ function renderProdutos(lista) {
         const imgUrl = resolverImagem(p.imagem);
 
         const badges = [];
-        if (Number(p.quantidade) === 1) {
-            badges.push('<span class="badge-tag ultima">Última Peça</span>');
-        }
         if (isProdutoNovo(p)) {
             badges.push('<span class="badge-tag novo">NOVIDADE</span>');
         }

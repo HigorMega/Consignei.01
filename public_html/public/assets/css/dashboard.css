@@ -130,6 +130,12 @@
             border: 2px solid #eee;
             transition: transform 0.2s;
         }
+        .theme-options {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: center;
+        }
         .theme-opt:hover,
         .theme-opt.active,
         .theme-opt.selected {
