@@ -90,11 +90,12 @@
             left: 0;
             width: 100%;
             height: var(--topbar-height);
-            background: var(--dark);
-            color: #fff;
+            background: transparent;
+            color: var(--text-color);
             z-index: 3000;
             display: flex;
             align-items: center;
+            justify-content: center;
             padding: 0 20px;
             gap: 16px;
             transition: transform 0.3s ease;
@@ -109,7 +110,9 @@
         .topbar-left {
             min-width: 0;
             flex: 0 1 auto;
-            gap: 12px;
+            flex-direction: column;
+            justify-content: center;
+            gap: 4px;
         }
         .topbar-brand {
             display: flex;
@@ -129,18 +132,21 @@
             max-width: 220px;
         }
         .topbar-center {
-            flex: 1;
             text-align: center;
-            font-size: 12px;
+            font-size: 11px;
             letter-spacing: 0.6px;
             text-transform: uppercase;
             font-weight: 600;
-            color: rgba(255, 255, 255, 0.85);
+            color: rgba(17, 17, 17, 0.65);
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
         }
         .topbar-center.is-empty { opacity: 0; }
+        .topbar-right {
+            position: absolute;
+            right: 20px;
+        }
         .topbar-right a {
             width: 32px;
             height: 32px;
@@ -148,21 +154,24 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            background: rgba(255, 255, 255, 0.08);
-            color: #fff;
+            background: rgba(17, 17, 17, 0.06);
+            color: var(--text-color);
             text-decoration: none;
             transition: transform 0.2s ease, background 0.2s ease;
         }
-        .topbar-right a:hover { transform: translateY(-1px); background: rgba(255,255,255,0.16); }
+        .topbar-right a:hover { transform: translateY(-1px); background: rgba(17,17,17,0.12); }
         .topbar-right a i { font-size: 18px; }
 
         /* TOOLBAR */
         .toolbar { 
             display: flex; justify-content: space-between; align-items: center; 
             padding: 15px 20px; max-width: 1400px; margin: 0 auto; 
-            background: transparent; position: sticky; top: calc(var(--topbar-height) + 5px); z-index: 1000; 
+            background: transparent; position: sticky; top: calc(var(--topbar-offset, var(--topbar-height)) + 5px); z-index: 1000; 
             box-shadow: none; gap: 10px;
             backdrop-filter: none;
+        }
+        body.topbar-hidden {
+            --topbar-offset: 0px;
         }
         .toolbar-filters {
             display: flex;
@@ -325,7 +334,7 @@
                 gap: 10px;
             }
             .topbar-brand span { max-width: 140px; font-size: 14px; }
-            .topbar-center { display: none; }
+            .topbar-right { right: 14px; }
             .toolbar { flex-direction: column; padding: 15px; gap: 10px; } 
             .toolbar-filters { flex-direction: column; align-items: stretch; display: none; } 
             .toolbar-filters.is-open { display: flex; } 
@@ -369,8 +378,8 @@
             <i class="ph-fill ph-diamonds-four" style="color: var(--gold); font-size: 24px;"></i>
             <span id="headerNomeLoja">Minha Loja</span>
         </div>
+        <div class="topbar-center is-empty" id="topbarAviso"></div>
     </div>
-    <div class="topbar-center is-empty" id="topbarAviso"></div>
     <div class="topbar-right">
         <a id="headerInstagram" href="#" target="_blank" rel="noopener" aria-label="Instagram da loja" style="display:none;">
             <i class="ph ph-instagram-logo"></i>
