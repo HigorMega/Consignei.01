@@ -27,14 +27,86 @@ try {
         billing_checkout_json_error(401, 'unauthorized');
     }
 
-    $checkoutUrl = env('BILLING_CHECKOUT_URL');
-    if (!$checkoutUrl) {
-        billing_checkout_json_error(500, 'Erro interno', 'Checkout não configurado. Defina BILLING_CHECKOUT_URL no .env.');
+    $accessToken = env('MP_ACCESS_TOKEN');
+    if (!$accessToken) {
+        billing_checkout_json_error(500, 'Erro interno', 'MP_ACCESS_TOKEN não configurado.');
+    }
+
+    $appUrl = rtrim(env('APP_URL', ''), '/');
+    if (!$appUrl) {
+        billing_checkout_json_error(500, 'Erro interno', 'APP_URL não configurado.');
     }
 
     $lojaId = (int) ($_SESSION['loja_id'] ?? 0);
     if ($lojaId <= 0) {
         billing_checkout_json_error(401, 'unauthorized');
+    }
+
+    $stmt = $pdo->prepare('SELECT email FROM lojas WHERE id = ? LIMIT 1');
+    $stmt->execute([$lojaId]);
+    $loja = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$loja) {
+        billing_checkout_json_error(404, 'Erro interno', 'Loja não encontrada.');
+    }
+
+    $price = (float) env('SUBSCRIPTION_PRICE', '21.90');
+    $trialDays = (int) env('SUBSCRIPTION_TRIAL_DAYS', '5');
+    $reason = env('SUBSCRIPTION_REASON', 'Consignei App - Mensalidade');
+    $startDate = (new DateTimeImmutable('now'))
+        ->modify(sprintf('+%d days', max(0, $trialDays)))
+        ->format(DATE_ATOM);
+
+    $notificationUrl = $appUrl . '/api/billing_webhook.php';
+    $backUrl = $appUrl . '/public/assinatura_retorno.html';
+
+    $payload = [
+        'reason' => $reason,
+        'external_reference' => (string) $lojaId,
+        'payer_email' => $loja['email'] ?? '',
+        'auto_recurring' => [
+            'frequency' => 1,
+            'frequency_type' => 'months',
+            'transaction_amount' => $price,
+            'currency_id' => 'BRL',
+            'start_date' => $startDate,
+        ],
+        'notification_url' => $notificationUrl,
+        'back_url' => $backUrl,
+    ];
+
+    $ch = curl_init('https://api.mercadopago.com/preapproval');
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST => true,
+        CURLOPT_HTTPHEADER => [
+            'Authorization: Bearer ' . $accessToken,
+            'Content-Type: application/json',
+        ],
+        CURLOPT_POSTFIELDS => json_encode($payload),
+    ]);
+
+    $response = curl_exec($ch);
+    $curlError = curl_error($ch);
+    $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    if ($response === false) {
+        billing_checkout_json_error(500, 'Erro interno', 'Erro ao conectar ao gateway: ' . $curlError);
+    }
+
+    $data = json_decode($response, true);
+    if ($httpCode >= 400) {
+        billing_checkout_json_error($httpCode, 'Erro interno', 'Erro ao criar assinatura.');
+    }
+
+    if (empty($data['id'])) {
+        billing_checkout_json_error(500, 'Erro interno', 'Resposta inválida ao criar assinatura.');
+    }
+
+    $isSandbox = strtolower((string) env('MP_MODE', '')) === 'sandbox' || str_starts_with($accessToken, 'TEST-');
+    $checkoutUrl = $isSandbox ? ($data['sandbox_init_point'] ?? null) : ($data['init_point'] ?? null);
+    if (!$checkoutUrl) {
+        billing_checkout_json_error(500, 'Erro interno', 'Checkout não retornou URL.');
     }
 
     $updates = [];
@@ -46,13 +118,8 @@ try {
     }
 
     if (sh_column_exists($pdo, 'lojas', 'subscription_id')) {
-        $stmt = $pdo->prepare('SELECT subscription_id FROM lojas WHERE id = ? LIMIT 1');
-        $stmt->execute([$lojaId]);
-        $existing = $stmt->fetch(PDO::FETCH_ASSOC);
-        if (empty($existing['subscription_id'])) {
-            $updates[] = 'subscription_id = ?';
-            $values[] = 'sub_' . bin2hex(random_bytes(8));
-        }
+        $updates[] = 'subscription_id = ?';
+        $values[] = $data['id'];
     }
 
     if ($updates) {
