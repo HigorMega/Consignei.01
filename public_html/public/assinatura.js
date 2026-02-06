@@ -3,6 +3,18 @@ const trialBadge = document.getElementById('trialBadge');
 const btnAssinar = document.getElementById('btnAssinar');
 const faturasContent = document.getElementById('faturasContent');
 
+const readJsonResponse = async (response) => {
+    const text = await response.text();
+    if (!text) {
+        throw new Error('Resposta vazia do servidor.');
+    }
+    try {
+        return JSON.parse(text);
+    } catch (error) {
+        throw new Error('Resposta inválida do servidor.');
+    }
+};
+
 const formatDate = (value) => {
     if (!value) return '--';
     const date = new Date(value.replace(' ', 'T'));
@@ -60,7 +72,7 @@ const carregarFaturas = async () => {
         if (!response.ok) {
             throw new Error('Falha ao carregar faturas.');
         }
-        const data = await response.json();
+        const data = await readJsonResponse(response);
         renderFaturas(data.faturas || []);
     } catch (error) {
         faturasContent.textContent = 'Não foi possível carregar as faturas.';
@@ -91,7 +103,7 @@ const atualizarStatus = (status) => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({}),
             });
-            const data = await response.json();
+            const data = await readJsonResponse(response);
             if (response.ok && data.init_point) {
                 window.location.href = data.init_point;
                 return;
@@ -116,7 +128,7 @@ const carregarStatus = async () => {
         if (!response.ok) {
             throw new Error('Erro ao buscar status.');
         }
-        const status = await response.json();
+        const status = await readJsonResponse(response);
         atualizarStatus(status);
 
         if (status.trial_until) {
