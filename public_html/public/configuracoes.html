@@ -109,6 +109,15 @@
         input[type=number] { -moz-appearance: textfield; }
         
         .box { background: var(--white); padding: 25px; border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 25px; border: 1px solid rgba(0,0,0,0.02); overflow: hidden; }
+        .status-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 999px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+        .status-badge.status-active { background: #e6fffa; color: var(--success); }
+        .status-badge.status-trial { background: #fff6e6; color: #d4af37; }
+        .status-badge.status-pending { background: #f1f2f6; color: #7f8c8d; }
+        .status-badge.status-expired { background: #ffeaea; color: var(--danger); }
+        .status-badge.status-cancelled { background: #f5f6fa; color: #636e72; }
+        .checkout-frame { width: 100%; min-height: 420px; border: 1px solid #f0f0f0; border-radius: 12px; background: #fff; }
+        .checkout-loading { display: flex; align-items: center; gap: 10px; padding: 12px; background: #f8f9fb; border-radius: 12px; font-size: 12px; color: #666; }
+        .checkout-loading .spinner { width: 24px; height: 24px; border-width: 3px; }
 
         /* MENU LATERAL */
         .sidebar { width: 260px; background: var(--white); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 25px; flex-shrink: 0; height: 100vh; z-index: 1000; }
@@ -642,6 +651,31 @@
             </div>
             </form>
             <div class="box" style="margin-top: 25px; background: #f9f9f9;"><h3 style="font-size: 14px; margin-top:0; color:#444;">Link da Vitrine</h3><div style="display: flex; gap: 10px;"><input type="text" id="linkVitrine" readonly style="background: white;"><button class="btn btn-primary" id="btnCopiarLink">Copiar</button><a class="btn btn-secondary" id="btnAbrirLink" href="#" target="_blank" rel="noopener">Abrir</a></div></div>
+            <div class="box" style="margin-top: 25px;">
+                <div style="display:flex; align-items:center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+                    <div>
+                        <h3 style="font-size: 16px; margin:0; color:#444;">Assinatura</h3>
+                        <p style="margin:6px 0 0; font-size: 12px; color:#777;">Plano mensal R$ 21,90 com 5 dias de teste grátis.</p>
+                    </div>
+                    <span id="assinaturaStatusBadge" class="status-badge status-pending">Pendente</span>
+                </div>
+                <div style="margin-top: 18px; display: grid; grid-template-columns: 1fr 1fr; gap: 18px;">
+                    <div>
+                        <label style="font-size:12px; color:#999; font-weight:600; text-transform: uppercase;">Status atual</label>
+                        <div id="assinaturaStatusTexto" style="font-size: 14px; font-weight: 600; color: #444; margin-top: 6px;">Pendente</div>
+                    </div>
+                    <div>
+                        <label style="font-size:12px; color:#999; font-weight:600; text-transform: uppercase;">Renovação</label>
+                        <div id="assinaturaStatusData" style="font-size: 13px; color: #666; margin-top: 6px;">Aguardando ativação</div>
+                    </div>
+                </div>
+                <div style="display:flex; align-items:center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 20px;">
+                    <div style="font-size: 12px; color:#888; display:flex; align-items:center; gap:6px;">
+                        <i class="ph ph-shield-check"></i> Pagamento seguro com gateway de pagamento.
+                    </div>
+                    <button class="btn btn-primary" id="btnAssinaturaPrincipal" data-modal-open="modalPagamento"><i class="ph ph-credit-card"></i> Ativar assinatura</button>
+                </div>
+            </div>
             <div class="box" style="margin-top: 40px; border: 1px solid #ffcccc; background: #fff5f5;">
                 <h3 style="color: #d32f2f; margin-top: 0; display: flex; align-items: center; gap: 10px; font-size: 16px;"><i class="ph-fill ph-warning" style="font-size: 22px;"></i> Zona de Perigo</h3>
                 <p style="font-size: 13px; color: #666; line-height: 1.5; margin-bottom: 20px;">Ao excluir sua conta, todos os seus <strong>produtos, vendas, fotos e configurações</strong> serão apagados permanentemente. Esta ação é irreversível.</p>
@@ -659,6 +693,29 @@
 <div id="modalSucesso" class="modal-overlay modal--center" role="dialog" aria-modal="true" aria-labelledby="modalSucessoTitle" aria-describedby="msgSucesso"><div class="modal-content" style="text-align: center;"><div class="modal-icon icon-success" style="margin-bottom:15px;"><i class="ph-fill ph-check-circle"></i></div><h3 class="modal-title" id="modalSucessoTitle">Sucesso!</h3><p class="modal-desc" id="msgSucesso" style="margin-bottom: 25px;">Ação realizada.</p><button class="btn btn-primary" data-modal-close="modalSucesso" style="width: 100%; padding: 12px;">OK</button></div></div>
 <div id="modalExcluirConta" class="modal-overlay modal--center" role="dialog" aria-modal="true" aria-labelledby="modalExcluirContaTitle" aria-describedby="modalExcluirContaDesc"><div class="modal-content"><div class="modal-header"><div class="modal-icon icon-danger"><i class="ph-fill ph-warning-octagon"></i></div><h3 class="modal-title" id="modalExcluirContaTitle" style="color: var(--danger);">Excluir Conta?</h3><p class="modal-desc" id="modalExcluirContaDesc">Digite <strong>EXCLUIR</strong> para confirmar.</p></div><input type="text" id="inputConfirmaExclusao" placeholder="EXCLUIR" style="text-align: center; border: 2px solid #ffcccc; margin-bottom: 10px; text-transform: uppercase; font-weight: bold; letter-spacing: 1px;"><div class="modal-actions"><button class="btn btn-secondary" data-modal-close="modalExcluirConta">Cancelar</button><button class="btn btn-danger" id="btnFinalizarExclusao">Apagar Tudo</button></div></div></div>
 <div id="modalNovaRemessa" class="modal-overlay modal--center" role="dialog" aria-modal="true" aria-labelledby="modalNovaRemessaTitle" aria-describedby="modalNovaRemessaDesc"><div class="modal-content"><div class="modal-header"><div class="modal-icon icon-info"><i class="ph ph-package"></i></div><h3 class="modal-title" id="modalNovaRemessaTitle">Nova Remessa</h3><p class="modal-desc" id="modalNovaRemessaDesc">Inicie um novo lote de consignação.</p></div><label style="font-size:11px; font-weight:700; color:#999; text-transform:uppercase; display:block; margin-bottom:5px;">Fornecedor</label><select id="remessaFornecedor" style="margin-bottom: 20px;"></select><label style="font-size:11px; font-weight:700; color:#999; text-transform:uppercase; display:block; margin-bottom:5px;">Observação</label><input type="text" id="remessaObs" placeholder="Ex: Coleção Verão..." style="margin-bottom: 20px;"><div class="modal-actions"><button class="btn btn-secondary" data-modal-close="modalNovaRemessa">Cancelar</button><button class="btn btn-primary" id="btnConfirmarNovaRemessa">Criar Lote</button></div></div></div>
+<div id="modalPagamento" class="modal-overlay modal--center" role="dialog" aria-modal="true" aria-labelledby="modalPagamentoTitle" aria-describedby="modalPagamentoDesc">
+    <div class="modal-content">
+        <div class="modal-header">
+            <div class="modal-icon icon-info"><i class="ph ph-credit-card"></i></div>
+            <h3 class="modal-title" id="modalPagamentoTitle">Pagamento da Assinatura</h3>
+            <p class="modal-desc" id="modalPagamentoDesc">Finalize o pagamento do plano mensal.</p>
+        </div>
+        <div style="display:flex; align-items:center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 18px;">
+            <div style="font-size: 13px; color:#444; font-weight: 600;">R$ 21,90 / mês</div>
+            <div style="font-size: 12px; color:#777;">5 dias grátis no teste</div>
+        </div>
+        <div id="checkoutLoading" class="checkout-loading">
+            <div class="spinner"></div>
+            <span>Carregando checkout seguro...</span>
+        </div>
+        <div style="margin-top: 12px;">
+            <iframe id="iframeCheckout" class="checkout-frame" src="about:blank" title="Checkout seguro" loading="lazy"></iframe>
+        </div>
+        <div class="modal-actions" style="margin-top: 20px;">
+            <button class="btn btn-secondary" data-modal-close="modalPagamento">Fechar</button>
+        </div>
+    </div>
+</div>
 
 <script src="js/modal.js"></script>
 <script>

@@ -57,7 +57,9 @@ const API = {
     lotes: '../api/lotes.php', lote_itens: '../api/lote_itens.php',
     aprovar_lote: '../api/aprovar_lote.php',
     relatorio_lote: '../api/relatorio_lote.php',
-    baixar_devolucao: '../api/baixar_devolucao_lote.php'
+    baixar_devolucao: '../api/baixar_devolucao_lote.php',
+    billing_status: '../api/billing/status.php',
+    billing_checkout: '../api/billing/create_checkout.php'
 };
 
 const App = {
@@ -122,6 +124,176 @@ function parseDecimalInput(value) {
         .replace(',', '.');
     const parsed = parseFloat(normalized);
     return Number.isNaN(parsed) ? 0 : parsed;
+}
+
+// --- ASSINATURA / PAGAMENTOS ---
+const BillingUI = {
+    pollTimeout: null,
+    polling: false
+};
+
+function formatDateShort(dateStr) {
+    if (!dateStr) return null;
+    const date = new Date(dateStr);
+    if (Number.isNaN(date.getTime())) return null;
+    return date.toLocaleDateString('pt-BR');
+}
+
+function normalizeBillingStatus(status) {
+    if (!status) return 'pending';
+    const normalized = status.toString().toLowerCase();
+    if (['authorized', 'active', 'approved'].includes(normalized)) return 'active';
+    if (['trial', 'testing'].includes(normalized)) return 'trial';
+    if (['expired', 'overdue'].includes(normalized)) return 'expired';
+    if (['cancelled', 'canceled'].includes(normalized)) return 'cancelled';
+    return 'pending';
+}
+
+function updateAssinaturaBadge(status) {
+    const badge = document.getElementById('assinaturaStatusBadge');
+    if (!badge) return;
+    badge.classList.remove('status-active', 'status-trial', 'status-pending', 'status-expired', 'status-cancelled');
+    badge.classList.add(`status-${status}`);
+}
+
+async function carregarStatusAssinaturaUI() {
+    const statusText = document.getElementById('assinaturaStatusTexto');
+    const statusDate = document.getElementById('assinaturaStatusData');
+    const actionBtn = document.getElementById('btnAssinaturaPrincipal');
+
+    if (!statusText || !statusDate || !actionBtn) {
+        return;
+    }
+
+    try {
+        const response = await fetch(API.billing_status);
+        const payload = await response.json();
+        if (!payload || !payload.success) {
+            throw new Error(payload?.message || 'Erro ao carregar status.');
+        }
+
+        const status = normalizeBillingStatus(payload.status);
+        const labels = {
+            trial: 'Em teste',
+            active: 'Ativa',
+            pending: 'Pendente',
+            expired: 'Vencida',
+            cancelled: 'Cancelada'
+        };
+
+        const label = labels[status] || 'Pendente';
+        statusText.textContent = label;
+        const badge = document.getElementById('assinaturaStatusBadge');
+        if (badge) {
+            badge.textContent = label;
+        }
+        updateAssinaturaBadge(status);
+
+        let info = 'Aguardando ativação';
+        if (status === 'trial') {
+            const trialUntil = formatDateShort(payload.trial_until);
+            info = trialUntil ? `Teste grátis até ${trialUntil}` : 'Teste grátis em andamento';
+        } else if (status === 'active') {
+            const paidUntil = formatDateShort(payload.paid_until);
+            info = paidUntil ? `Próxima renovação em ${paidUntil}` : 'Assinatura ativa';
+        } else if (status === 'expired') {
+            info = 'Renovação pendente';
+        } else if (status === 'cancelled') {
+            info = 'Assinatura cancelada';
+        }
+
+        statusDate.textContent = info;
+        actionBtn.innerHTML = status === 'active'
+            ? '<i class="ph ph-credit-card"></i> Gerenciar pagamento'
+            : '<i class="ph ph-credit-card"></i> Ativar assinatura';
+        actionBtn.dataset.status = status;
+    } catch (error) {
+        console.warn('Erro ao atualizar assinatura:', error);
+        statusText.textContent = 'Indisponível';
+        statusDate.textContent = 'Tente novamente mais tarde';
+        const badge = document.getElementById('assinaturaStatusBadge');
+        if (badge) {
+            badge.textContent = 'Pendente';
+        }
+        updateAssinaturaBadge('pending');
+    }
+}
+
+function setCheckoutLoading(isLoading) {
+    const loading = document.getElementById('checkoutLoading');
+    const iframe = document.getElementById('iframeCheckout');
+    if (loading) loading.style.display = isLoading ? 'flex' : 'none';
+    if (iframe) iframe.style.opacity = isLoading ? '0.4' : '1';
+}
+
+function limparCheckoutModal() {
+    if (BillingUI.pollTimeout) {
+        clearTimeout(BillingUI.pollTimeout);
+        BillingUI.pollTimeout = null;
+    }
+    BillingUI.polling = false;
+    const iframe = document.getElementById('iframeCheckout');
+    if (iframe) iframe.src = 'about:blank';
+    setCheckoutLoading(false);
+}
+
+function iniciarPollingAssinatura() {
+    if (BillingUI.polling) return;
+    BillingUI.polling = true;
+
+    const poll = async () => {
+        if (!BillingUI.polling) return;
+        try {
+            const response = await fetch(API.billing_status);
+            const payload = await response.json();
+            if (payload?.success) {
+                const status = normalizeBillingStatus(payload.status);
+                if (status === 'active') {
+                    BillingUI.polling = false;
+                    closeModal('modalPagamento');
+                    limparCheckoutModal();
+                    await carregarStatusAssinaturaUI();
+                    Swal.fire({ icon: 'success', title: 'Assinatura ativada com sucesso', text: 'Seu plano já está ativo.' });
+                    return;
+                }
+            }
+        } catch (error) {
+            console.warn('Polling assinatura:', error);
+        }
+        const delay = 4000 + Math.floor(Math.random() * 2000);
+        BillingUI.pollTimeout = setTimeout(poll, delay);
+    };
+
+    poll();
+}
+
+async function iniciarCheckoutAssinatura(event) {
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+    openModal('modalPagamento');
+    setCheckoutLoading(true);
+
+    try {
+        const response = await fetch(API.billing_checkout, { method: 'POST' });
+        const payload = await response.json();
+        if (!payload?.success || !payload.checkout_url) {
+            throw new Error(payload?.message || 'Não foi possível iniciar o pagamento.');
+        }
+
+        const iframe = document.getElementById('iframeCheckout');
+        if (iframe) {
+            iframe.onload = () => setCheckoutLoading(false);
+            iframe.src = payload.checkout_url;
+        } else {
+            setCheckoutLoading(false);
+        }
+        iniciarPollingAssinatura();
+    } catch (error) {
+        setCheckoutLoading(false);
+        Swal.fire({ icon: 'error', title: 'Erro', text: error.message || 'Falha ao iniciar o pagamento.' });
+    }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -202,7 +374,8 @@ async function initApp() {
         App.data.lojaId = sessao.loja_id;
         
         await Promise.all([
-            carregarConfiguracoes(), carregarCategorias(), carregarFornecedores(), carregarProdutos(), carregarVendas()
+            carregarConfiguracoes(), carregarCategorias(), carregarFornecedores(), carregarProdutos(), carregarVendas(),
+            carregarStatusAssinaturaUI()
         ]);
         renderizarGraficoVendas(); 
         gerarLinkVitrine();
@@ -257,6 +430,32 @@ function setupStaticListeners() {
             document.querySelectorAll('.theme-opt').forEach(o => o.classList.remove('selected'));
             opt.classList.add('selected');
         });
+    });
+
+    const assinaturaBtn = document.getElementById('btnAssinaturaPrincipal');
+    if (assinaturaBtn) {
+        assinaturaBtn.addEventListener('click', iniciarCheckoutAssinatura);
+    }
+
+    const modalPagamento = document.getElementById('modalPagamento');
+    if (modalPagamento) {
+        modalPagamento.querySelectorAll('[data-modal-close="modalPagamento"]').forEach((btn) => {
+            btn.addEventListener('click', limparCheckoutModal);
+        });
+        modalPagamento.addEventListener('click', (event) => {
+            if (event.target === modalPagamento) {
+                limparCheckoutModal();
+            }
+        });
+    }
+
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+            const modalPagamentoEl = document.getElementById('modalPagamento');
+            if (modalPagamentoEl && modalPagamentoEl.classList.contains('open')) {
+                limparCheckoutModal();
+            }
+        }
     });
 
     const btnLogout = document.getElementById('btnLogout');
