@@ -121,6 +121,15 @@
         input, select { padding: 12px; border: 1px solid var(--border); border-radius: 12px; font-size: 13px; width: 100%; background: #fdfdfd; color: #444; transition: 0.2s; }
         input:focus, select:focus { border-color: var(--primary); background: #fff; box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.1); }
         .box { background: var(--white); padding: 25px; border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 25px; border: 1px solid rgba(0,0,0,0.02); overflow: hidden; }
+        .status-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 999px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+        .status-badge.status-active { background: #e6fffa; color: var(--success); }
+        .status-badge.status-trial { background: #fff6e6; color: var(--primary); }
+        .status-badge.status-pending { background: #f1f2f6; color: #7f8c8d; }
+        .status-badge.status-expired { background: #ffeaea; color: var(--danger); }
+        .status-badge.status-cancelled { background: #f5f6fa; color: #636e72; }
+        .checkout-frame { width: 100%; min-height: 420px; border: 1px solid #f0f0f0; border-radius: 12px; background: #fff; }
+        .checkout-loading { display: flex; align-items: center; gap: 10px; padding: 12px; background: #f8f9fb; border-radius: 12px; font-size: 12px; color: #666; }
+        .checkout-loading .spinner { width: 24px; height: 24px; border-width: 3px; }
 
         .theme-opt {
             width: 40px;
