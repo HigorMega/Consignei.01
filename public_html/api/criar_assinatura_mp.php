@@ -38,7 +38,9 @@ if (!$appUrl) {
 $notificationUrl = $appUrl . '/api/webhook_mp.php';
 $backUrl = $appUrl . '/public/assinatura_retorno.html';
 
-$startDate = (new DateTimeImmutable('now'))->modify('+5 days')->format(DATE_ATOM);
+$startDate = sh_format_mp_datetime(
+    (new DateTimeImmutable('now'))->modify('+5 days')
+);
 
 $payload = [
     'reason' => $reason,
