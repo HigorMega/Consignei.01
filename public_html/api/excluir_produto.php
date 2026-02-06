@@ -4,12 +4,10 @@ session_start();
 header("Content-Type: application/json; charset=UTF-8");
 
 require_once '../db/conexao.php';
+require_once __DIR__ . "/subscription_helpers.php";
 
-if (!isset($_SESSION['logado']) || $_SESSION['logado'] !== true || empty($_SESSION['loja_id'])) {
-    http_response_code(401);
-    echo json_encode(['success' => false, 'error' => 'Não autorizado.']);
-    exit;
-}
+sh_require_login();
+sh_require_active_subscription($pdo);
 
 $loja_id = (int)$_SESSION['loja_id'];
 

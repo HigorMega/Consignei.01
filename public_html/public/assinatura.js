@@ -1,0 +1,141 @@
+const statusMessage = document.getElementById('statusMessage');
+const trialBadge = document.getElementById('trialBadge');
+const btnAssinar = document.getElementById('btnAssinar');
+const faturasContent = document.getElementById('faturasContent');
+
+const formatDate = (value) => {
+    if (!value) return '--';
+    const date = new Date(value.replace(' ', 'T'));
+    if (Number.isNaN(date.getTime())) return '--';
+    return date.toLocaleDateString('pt-BR');
+};
+
+const formatDateTime = (value) => {
+    if (!value) return '--';
+    const date = new Date(value.replace(' ', 'T'));
+    if (Number.isNaN(date.getTime())) return '--';
+    return date.toLocaleString('pt-BR');
+};
+
+const renderFaturas = (faturas) => {
+    if (!Array.isArray(faturas) || faturas.length === 0) {
+        faturasContent.textContent = 'Nenhuma fatura encontrada.';
+        return;
+    }
+
+    const rows = faturas.map((fatura) => {
+        const statusClass = fatura.status === 'paid'
+            ? 'status-paid'
+            : (fatura.status === 'failed' ? 'status-failed' : 'status-pending');
+        return `
+            <tr>
+                <td><span class="status-pill ${statusClass}">${fatura.status}</span></td>
+                <td>R$ ${Number(fatura.amount).toFixed(2)}</td>
+                <td>${formatDate(fatura.period_start)} - ${formatDate(fatura.period_end)}</td>
+                <td>${formatDateTime(fatura.paid_at || fatura.created_at)}</td>
+                <td>${fatura.mp_payment_id || '-'}</td>
+            </tr>
+        `;
+    }).join('');
+
+    faturasContent.innerHTML = `
+        <table class="faturas-table">
+            <thead>
+                <tr>
+                    <th>Status</th>
+                    <th>Valor</th>
+                    <th>Período</th>
+                    <th>Data</th>
+                    <th>Pagamento</th>
+                </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+        </table>
+    `;
+};
+
+const carregarFaturas = async () => {
+    try {
+        const response = await fetch('../api/assinatura_faturas.php', { credentials: 'include' });
+        if (!response.ok) {
+            throw new Error('Falha ao carregar faturas.');
+        }
+        const data = await response.json();
+        renderFaturas(data.faturas || []);
+    } catch (error) {
+        faturasContent.textContent = 'Não foi possível carregar as faturas.';
+    }
+};
+
+const atualizarStatus = (status) => {
+    if (!statusMessage) return;
+
+    if (status.active) {
+        statusMessage.textContent = 'Assinatura ativa. Acesso liberado ao painel.';
+        btnAssinar.textContent = 'Ir para o dashboard';
+        btnAssinar.onclick = () => {
+            window.location.href = '/public/dashboard.html';
+        };
+        return;
+    }
+
+    statusMessage.textContent = 'Assinatura inativa. Ative para continuar usando o painel.';
+    btnAssinar.textContent = 'Ativar assinatura';
+    btnAssinar.onclick = async () => {
+        btnAssinar.disabled = true;
+        btnAssinar.textContent = 'Redirecionando...';
+        try {
+            const response = await fetch('../api/criar_assinatura_mp.php', {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({}),
+            });
+            const data = await response.json();
+            if (response.ok && data.init_point) {
+                window.location.href = data.init_point;
+                return;
+            }
+            throw new Error(data.message || 'Falha ao criar assinatura.');
+        } catch (error) {
+            alert('Não foi possível iniciar a assinatura. Tente novamente.');
+        } finally {
+            btnAssinar.disabled = false;
+            btnAssinar.textContent = 'Ativar assinatura';
+        }
+    };
+};
+
+const carregarStatus = async () => {
+    try {
+        const response = await fetch('../api/assinatura_status.php', { credentials: 'include' });
+        if (response.status === 401) {
+            window.location.href = '/public/login.html';
+            return;
+        }
+        if (!response.ok) {
+            throw new Error('Erro ao buscar status.');
+        }
+        const status = await response.json();
+        atualizarStatus(status);
+
+        if (status.trial_until) {
+            const trialDate = new Date(status.trial_until.replace(' ', 'T'));
+            if (!Number.isNaN(trialDate.getTime()) && trialDate > new Date()) {
+                trialBadge.classList.remove('is-hidden');
+                trialBadge.textContent = `Trial ativo até ${trialDate.toLocaleDateString('pt-BR')}`;
+            } else {
+                trialBadge.classList.add('is-hidden');
+            }
+        } else {
+            trialBadge.classList.add('is-hidden');
+        }
+    } catch (error) {
+        statusMessage.textContent = 'Não foi possível carregar o status da assinatura.';
+    }
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+    carregarStatus();
+    carregarFaturas();
+});

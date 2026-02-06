@@ -114,7 +114,33 @@ try {
         // Ignora
     }
 
-    // 6) E-mail de ativação
+    // 6) Trial de assinatura (se colunas existirem)
+    $hasTrialUntilColumn = columnExists($pdo, 'lojas', 'trial_until');
+    $hasAssinaturaStatusColumn = columnExists($pdo, 'lojas', 'assinatura_status');
+
+    if ($hasTrialUntilColumn || $hasAssinaturaStatusColumn) {
+        $updates = [];
+        $values = [];
+
+        if ($hasTrialUntilColumn) {
+            $trialUntil = (new DateTimeImmutable('now'))->modify('+5 days')->format('Y-m-d H:i:s');
+            $updates[] = "trial_until = ?";
+            $values[] = $trialUntil;
+        }
+
+        if ($hasAssinaturaStatusColumn) {
+            $updates[] = "assinatura_status = ?";
+            $values[] = "trial";
+        }
+
+        if ($updates) {
+            $values[] = $novoId;
+            $stmtTrial = $pdo->prepare("UPDATE lojas SET " . implode(', ', $updates) . " WHERE id = ?");
+            $stmtTrial->execute($values);
+        }
+    }
+
+    // 7) E-mail de ativação
     $enviou = enviarEmailAtivacao($email, $nome_resp, $token);
 
     $payload = [

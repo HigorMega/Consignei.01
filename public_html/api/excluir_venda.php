@@ -5,13 +5,11 @@ header("Access-Control-Allow-Methods: DELETE");
 
 // CORREÇÃO 1: Usa a conexão correta e inicia sessão
 require_once "../db/conexao.php";
+require_once __DIR__ . "/subscription_helpers.php";
 session_start();
 
-// Verifica segurança
-if (!isset($_SESSION['loja_id'])) {
-    echo json_encode(["success" => false, "message" => "Sessão expirada."]);
-    exit;
-}
+sh_require_login();
+sh_require_active_subscription($pdo);
 
 $loja_id = $_SESSION['loja_id'];
 
