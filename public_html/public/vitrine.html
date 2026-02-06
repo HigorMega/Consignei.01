@@ -237,9 +237,14 @@
         .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
         .grid { 
             display: grid; 
-            /* MUDANÇA AQUI: aumentei de 160px para 280px para ficar grande no PC */
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); 
-            gap: 20px; /* Aumentei o espaço entre eles um pouquinho também */
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); 
+            gap: 20px;
+            align-items: stretch;
+        }
+        #listaProdutos {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 20px;
         }
         .card { 
             background: var(--card-bg); border: 1px solid rgba(0,0,0,0.05); border-radius: 8px; 
@@ -348,6 +353,10 @@
             .grid { 
                 grid-template-columns: 1fr 1fr; 
                 gap: 10px; 
+            }
+            #listaProdutos {
+                grid-template-columns: 1fr 1fr;
+                gap: 10px;
             }
             
             .info h3 { font-size: 13px; }
