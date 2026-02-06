@@ -71,9 +71,10 @@ try {
     $price = 21.90;
     $trialDays = 5;
     $reason = 'Plano Mensal';
-    $startDate = (new DateTimeImmutable('now'))
-        ->modify(sprintf('+%d days', max(0, $trialDays)))
-        ->format(DATE_ATOM);
+    $startDate = sh_format_mp_datetime(
+        (new DateTimeImmutable('now'))
+            ->modify(sprintf('+%d days', max(0, $trialDays)))
+    );
 
     $notificationUrl = $appUrl . '/api/billing_webhook.php';
     $backUrl = $appUrl . '/public/assinatura_retorno.html';

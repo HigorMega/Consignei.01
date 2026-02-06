@@ -34,6 +34,11 @@ function sh_parse_datetime(?string $value): ?DateTimeImmutable
     }
 }
 
+function sh_format_mp_datetime(DateTimeImmutable $value): string
+{
+    return $value->format('Y-m-d\TH:i:s.vP');
+}
+
 function sh_get_subscription_snapshot(PDO $pdo, int $lojaId): array
 {
     $hasTrial = sh_column_exists($pdo, 'lojas', 'trial_until');
