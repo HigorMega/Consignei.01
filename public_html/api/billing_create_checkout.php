@@ -7,15 +7,34 @@ session_start();
 require_once __DIR__ . '/../db/conexao.php';
 require_once __DIR__ . '/subscription_helpers.php';
 
-function billing_checkout_json_error(int $status, string $error, ?string $detail = null): void
+function billing_checkout_json_error(int $status, string $error, ?string $detail = null, array $extras = []): void
 {
     http_response_code($status);
     $payload = ['success' => false, 'error' => $error];
     if ($detail !== null) {
         $payload['detail'] = $detail;
     }
+    if ($extras) {
+        $payload = array_merge($payload, $extras);
+    }
     echo json_encode($payload, JSON_UNESCAPED_UNICODE);
     exit;
+}
+
+function billing_checkout_log(array $data): void
+{
+    $logDir = __DIR__ . '/../logs';
+    if (!is_dir($logDir)) {
+        mkdir($logDir, 0775, true);
+    }
+    $logFile = $logDir . '/billing_create_checkout.log';
+    $line = sprintf(
+        "%s %s%s",
+        (new DateTimeImmutable('now'))->format(DATE_ATOM),
+        json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+        PHP_EOL
+    );
+    file_put_contents($logFile, $line, FILE_APPEND);
 }
 
 try {
@@ -34,7 +53,7 @@ try {
 
     $appUrl = rtrim(env('APP_URL', ''), '/');
     if (!$appUrl) {
-        billing_checkout_json_error(500, 'Erro interno', 'APP_URL não configurado.');
+        billing_checkout_json_error(500, 'Erro interno', 'APP_URL ausente no .env');
     }
 
     $lojaId = (int) ($_SESSION['loja_id'] ?? 0);
@@ -49,9 +68,9 @@ try {
         billing_checkout_json_error(404, 'Erro interno', 'Loja não encontrada.');
     }
 
-    $price = (float) env('SUBSCRIPTION_PRICE', '21.90');
-    $trialDays = (int) env('SUBSCRIPTION_TRIAL_DAYS', '5');
-    $reason = env('SUBSCRIPTION_REASON', 'Consignei App - Mensalidade');
+    $price = 21.90;
+    $trialDays = 5;
+    $reason = 'Plano Mensal';
     $startDate = (new DateTimeImmutable('now'))
         ->modify(sprintf('+%d days', max(0, $trialDays)))
         ->format(DATE_ATOM);
@@ -74,29 +93,66 @@ try {
         'back_url' => $backUrl,
     ];
 
-    $ch = curl_init('https://api.mercadopago.com/preapproval');
-    curl_setopt_array($ch, [
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_POST => true,
-        CURLOPT_HTTPHEADER => [
-            'Authorization: Bearer ' . $accessToken,
-            'Content-Type: application/json',
-        ],
-        CURLOPT_POSTFIELDS => json_encode($payload),
+    $endpoint = 'https://api.mercadopago.com/preapproval';
+    $response = null;
+    $curlError = null;
+    $httpCode = 0;
+
+    try {
+        $ch = curl_init($endpoint);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST => true,
+            CURLOPT_HTTPHEADER => [
+                'Authorization: Bearer ' . $accessToken,
+                'Content-Type: application/json',
+            ],
+            CURLOPT_POSTFIELDS => json_encode($payload),
+            CURLOPT_TIMEOUT => 20,
+        ]);
+
+        $response = curl_exec($ch);
+        $curlError = curl_error($ch);
+        $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+    } catch (Throwable $e) {
+        billing_checkout_log([
+            'context' => 'curl_exception',
+            'url' => $endpoint,
+            'payload' => $payload,
+            'http_status' => $httpCode,
+            'response_body' => $response,
+            'curl_error' => $curlError,
+            'exception' => $e->getMessage(),
+        ]);
+        billing_checkout_json_error(500, 'Erro interno', 'Erro ao criar assinatura.', [
+            'provider_http_status' => $httpCode,
+            'provider_response' => $response,
+        ]);
+    }
+
+    billing_checkout_log([
+        'context' => 'provider_response',
+        'url' => $endpoint,
+        'payload' => $payload,
+        'http_status' => $httpCode,
+        'response_body' => $response,
+        'curl_error' => $curlError,
     ]);
 
-    $response = curl_exec($ch);
-    $curlError = curl_error($ch);
-    $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
-
     if ($response === false) {
-        billing_checkout_json_error(500, 'Erro interno', 'Erro ao conectar ao gateway: ' . $curlError);
+        billing_checkout_json_error(500, 'Erro interno', 'Erro ao conectar ao gateway: ' . $curlError, [
+            'provider_http_status' => $httpCode,
+            'provider_response' => $response,
+        ]);
     }
 
     $data = json_decode($response, true);
     if ($httpCode >= 400) {
-        billing_checkout_json_error($httpCode, 'Erro interno', 'Erro ao criar assinatura.');
+        billing_checkout_json_error($httpCode, 'Erro interno', 'Erro ao criar assinatura', [
+            'provider_http_status' => $httpCode,
+            'provider_response' => $response,
+        ]);
     }
 
     if (empty($data['id'])) {
