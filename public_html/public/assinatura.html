@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consignei - Assinatura</title>
+    <link rel="icon" type="image/png" href="/img/favicon.png?v=1.2">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/assets/css/auth.css">
+    <style>
+        body { background: linear-gradient(135deg, #111 0%, #1f1f1f 100%); }
+        .assinatura-card { max-width: 520px; }
+        .assinatura-card h2 { margin: 0 0 6px 0; font-size: 22px; color: #1a1a1a; }
+        .assinatura-card p { color: #666; font-size: 14px; margin-bottom: 16px; }
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 600;
+            background: rgba(212, 175, 55, 0.15);
+            color: #8c6e1a;
+            margin-bottom: 16px;
+        }
+        .status-box {
+            padding: 12px 14px;
+            border-radius: 10px;
+            background: #f6f6f6;
+            border: 1px solid #e5e5e5;
+            margin-bottom: 16px;
+            font-size: 13px;
+            color: #555;
+        }
+        .faturas-section { margin-top: 24px; }
+        .faturas-section h3 { margin-bottom: 10px; font-size: 16px; color: #1a1a1a; }
+        .faturas-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+        .faturas-table th, .faturas-table td {
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+            text-align: left;
+        }
+        .faturas-table th {
+            text-transform: uppercase;
+            font-size: 10px;
+            letter-spacing: 0.5px;
+            color: #999;
+        }
+        .status-pill {
+            padding: 3px 8px;
+            border-radius: 999px;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            display: inline-block;
+        }
+        .status-paid { background: rgba(0, 184, 148, 0.15); color: #00b894; }
+        .status-pending { background: rgba(212, 175, 55, 0.15); color: #8c6e1a; }
+        .status-failed { background: rgba(225, 91, 103, 0.15); color: #e15b67; }
+        .empty-state { font-size: 13px; color: #888; }
+        .is-hidden { display: none; }
+    </style>
+</head>
+<body>
+    <div class="card assinatura-card">
+        <div class="logo">
+            <i class="ph-fill ph-diamonds-four" style="color: var(--primary);"></i> Consignei
+        </div>
+
+        <h2>Assinatura Consignei</h2>
+        <p>Teste grátis de 5 dias e depois R$ 21,90/mês. Cancele quando quiser.</p>
+
+        <div id="trialBadge" class="badge is-hidden">Trial ativo até --/--/----</div>
+        <div id="statusMessage" class="status-box">Carregando status...</div>
+
+        <button id="btnAssinar">Ativar assinatura</button>
+
+        <div id="faturasSection" class="faturas-section">
+            <h3>Faturas recentes</h3>
+            <div id="faturasContent" class="empty-state">Carregando faturas...</div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="assinatura.js"></script>
+</body>
+</html>

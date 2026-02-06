@@ -1,0 +1,18 @@
+CREATE TABLE IF NOT EXISTS invoices (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    loja_id INT NOT NULL,
+    assinatura_id VARCHAR(120) NOT NULL,
+    gateway VARCHAR(60) NOT NULL DEFAULT 'mercadopago',
+    mp_payment_id VARCHAR(120) NULL,
+    status ENUM('paid','pending','failed') NOT NULL DEFAULT 'pending',
+    amount DECIMAL(10,2) NOT NULL DEFAULT 21.90,
+    currency VARCHAR(3) NOT NULL DEFAULT 'BRL',
+    period_start DATETIME NULL,
+    period_end DATETIME NULL,
+    paid_at DATETIME NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_invoices_loja_id (loja_id),
+    INDEX idx_invoices_assinatura_id (assinatura_id),
+    INDEX idx_invoices_mp_payment_id (mp_payment_id),
+    INDEX idx_invoices_status (status)
+);

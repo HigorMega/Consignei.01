@@ -13,6 +13,7 @@ ini_set('display_errors', 0);
 error_reporting(E_ALL);
 
 require __DIR__ . '/bootstrap.php';
+require_once __DIR__ . "/subscription_helpers.php";
 
 header("Content-Type: application/json; charset=UTF-8");
 header("Access-Control-Allow-Origin: " . (env('ALLOWED_ORIGIN', '*') ?? '*'));
@@ -51,7 +52,9 @@ function getConexao() {
 
 $pdo = getConexao();
 if (session_status() === PHP_SESSION_NONE) session_start();
-$loja_id = $_SESSION['loja_id'] ?? 1;
+sh_require_login();
+sh_require_active_subscription($pdo);
+$loja_id = (int) $_SESSION['loja_id'];
 
 $apiKey = env('OPENAI_API_KEY');
 

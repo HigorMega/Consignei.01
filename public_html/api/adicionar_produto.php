@@ -2,13 +2,11 @@
 // Arquivo: api/adicionar_produto.php
 header('Content-Type: application/json');
 require_once "../db/conexao.php";
+require_once __DIR__ . "/subscription_helpers.php";
 session_start();
 
-// Verifica se o usuário está logado
-if (!isset($_SESSION['loja_id'])) {
-    echo json_encode(['success' => false, 'error' => 'Sessão expirada.']);
-    exit;
-}
+sh_require_login();
+sh_require_active_subscription($pdo);
 
 $loja_id = $_SESSION['loja_id'];
 $nome = $_POST['nome'] ?? '';

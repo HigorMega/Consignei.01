@@ -11,9 +11,12 @@ header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Methods: POST, OPTIONS");
 
 require_once '../db/conexao.php';
+require_once __DIR__ . "/subscription_helpers.php";
 
 if (session_status() === PHP_SESSION_NONE) session_start();
-$loja_id = $_SESSION['loja_id'] ?? 1;
+sh_require_login();
+sh_require_active_subscription($pdo);
+$loja_id = $_SESSION['loja_id'];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $data = json_decode(file_get_contents("php://input"), true);

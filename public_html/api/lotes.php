@@ -7,19 +7,16 @@ header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS");
 
 require_once '../db/conexao.php';
+require_once __DIR__ . "/subscription_helpers.php";
 
 if (session_status() === PHP_SESSION_NONE) session_start();
 
 $method = $_SERVER['REQUEST_METHOD'];
 if ($method === 'OPTIONS') { http_response_code(200); exit; }
 
-// Verifica se está logado
-if (!isset($_SESSION['loja_id'])) {
-    // Se não tiver sessão (ex: teste local), tenta usar 1 provisoriamente
-    $loja_id = 1; 
-} else {
-    $loja_id = $_SESSION['loja_id'];
-}
+sh_require_login();
+sh_require_active_subscription($pdo);
+$loja_id = $_SESSION['loja_id'];
 
 // 1. LISTAR LOTES (GET)
 if ($method === 'GET') {

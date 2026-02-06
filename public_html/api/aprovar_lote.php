@@ -15,19 +15,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 require_once '../db/conexao.php';
+require_once __DIR__ . "/subscription_helpers.php";
 
 if (session_status() === PHP_SESSION_NONE) session_start();
 
-$loja_id = $_SESSION['loja_id'] ?? null;
-if (!$loja_id) {
-    $input = json_decode(file_get_contents("php://input"), true);
-    $loja_id = $input['loja_id'] ?? null;
-}
-
-if (!$loja_id) {
-    echo json_encode(['success' => false, 'error' => 'Sessão inválida.']);
-    exit;
-}
+sh_require_login();
+sh_require_active_subscription($pdo);
+$loja_id = $_SESSION['loja_id'];
 
 try {
     $dados = json_decode(file_get_contents("php://input"), true);

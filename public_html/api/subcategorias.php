@@ -2,11 +2,10 @@
 session_start();
 header('Content-Type: application/json');
 include "../db/conexao.php";
+require_once __DIR__ . "/subscription_helpers.php";
 
-if (!isset($_SESSION['loja_id'])) {
-    echo json_encode(['error' => 'Não autorizado']);
-    exit;
-}
+sh_require_login();
+sh_require_active_subscription($pdo);
 
 $loja_id = $_SESSION['loja_id'];
 $method = $_SERVER['REQUEST_METHOD'];

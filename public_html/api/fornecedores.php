@@ -5,13 +5,10 @@ header('Content-Type: application/json');
 header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE");
 
 include "../db/conexao.php";
+require_once __DIR__ . "/subscription_helpers.php";
 
-// Verifica se está logado
-if (!isset($_SESSION['loja_id'])) {
-    http_response_code(403);
-    echo json_encode(['error' => 'Não autorizado']);
-    exit;
-}
+sh_require_login();
+sh_require_active_subscription($pdo);
 
 $loja_id = $_SESSION['loja_id'];
 $method = $_SERVER['REQUEST_METHOD'];

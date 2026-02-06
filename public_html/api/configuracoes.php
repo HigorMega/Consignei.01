@@ -3,13 +3,11 @@
 
 header('Content-Type: application/json; charset=UTF-8');
 require_once "../db/conexao.php";
+require_once __DIR__ . "/subscription_helpers.php";
 session_start();
 
-// 1. Verifica se a sessão existe
-if (!isset($_SESSION['loja_id'])) {
-    echo json_encode(['success' => false, 'error' => 'Sessão expirada.']);
-    exit;
-}
+sh_require_login();
+sh_require_active_subscription($pdo);
 
 $loja_id = (int)$_SESSION['loja_id'];
 
