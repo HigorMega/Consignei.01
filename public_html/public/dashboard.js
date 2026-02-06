@@ -58,8 +58,8 @@ const API = {
     aprovar_lote: '../api/aprovar_lote.php',
     relatorio_lote: '../api/relatorio_lote.php',
     baixar_devolucao: '../api/baixar_devolucao_lote.php',
-    billing_status: '../api/billing/status.php',
-    billing_checkout: '../api/billing/create_checkout.php'
+    billing_status: '../api/billing_status.php',
+    billing_checkout: '../api/billing_create_checkout.php'
 };
 
 const App = {
@@ -166,7 +166,7 @@ async function carregarStatusAssinaturaUI() {
     }
 
     try {
-        const response = await fetch(API.billing_status);
+        const response = await fetch(API.billing_status, { credentials: 'include' });
         const payload = await response.json();
         if (!payload || !payload.success) {
             throw new Error(payload?.message || 'Erro ao carregar status.');
@@ -244,7 +244,7 @@ function iniciarPollingAssinatura() {
     const poll = async () => {
         if (!BillingUI.polling) return;
         try {
-            const response = await fetch(API.billing_status);
+            const response = await fetch(API.billing_status, { credentials: 'include' });
             const payload = await response.json();
             if (payload?.success) {
                 const status = normalizeBillingStatus(payload.status);
@@ -276,7 +276,7 @@ async function iniciarCheckoutAssinatura(event) {
     setCheckoutLoading(true);
 
     try {
-        const response = await fetch(API.billing_checkout, { method: 'POST' });
+        const response = await fetch(API.billing_checkout, { method: 'POST', credentials: 'include' });
         const payload = await response.json();
         if (!payload?.success || !payload.checkout_url) {
             throw new Error(payload?.message || 'Não foi possível iniciar o pagamento.');
