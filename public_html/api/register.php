@@ -117,8 +117,9 @@ try {
     // 6) Trial de assinatura (se colunas existirem)
     $hasTrialUntilColumn = columnExists($pdo, 'lojas', 'trial_until');
     $hasAssinaturaStatusColumn = columnExists($pdo, 'lojas', 'assinatura_status');
+    $hasSubscriptionStatusColumn = columnExists($pdo, 'lojas', 'subscription_status');
 
-    if ($hasTrialUntilColumn || $hasAssinaturaStatusColumn) {
+    if ($hasTrialUntilColumn || $hasAssinaturaStatusColumn || $hasSubscriptionStatusColumn) {
         $updates = [];
         $values = [];
 
@@ -130,6 +131,11 @@ try {
 
         if ($hasAssinaturaStatusColumn) {
             $updates[] = "assinatura_status = ?";
+            $values[] = "trial";
+        }
+
+        if ($hasSubscriptionStatusColumn) {
+            $updates[] = "subscription_status = ?";
             $values[] = "trial";
         }
 
