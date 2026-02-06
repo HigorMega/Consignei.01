@@ -1,6 +1,7 @@
 <?php
 // api/webhook_mp.php
-header('Content-Type: application/json; charset=UTF-8');
+header('Content-Type: application/json; charset=utf-8');
+http_response_code(200);
 
 require_once "../db/conexao.php";
 require_once __DIR__ . "/subscription_helpers.php";
@@ -44,29 +45,28 @@ function mp_log(string $message): void
     file_put_contents($logFile, $message . PHP_EOL, FILE_APPEND | LOCK_EX);
 }
 
-$accessToken = env('MP_ACCESS_TOKEN');
-if (!$accessToken) {
-    http_response_code(500);
-    echo json_encode(['success' => false, 'message' => 'MP_ACCESS_TOKEN não configurado.']);
-    exit;
-}
-
 $payloadRaw = file_get_contents('php://input') ?: '';
 $payload = json_decode($payloadRaw, true) ?: [];
+mp_log(date('c') . " | payload=" . $payloadRaw);
+
+$accessToken = env('MP_ACCESS_TOKEN');
+if (!$accessToken) {
+    mp_log(date('c') . " | error=missing_access_token");
+    echo json_encode(['success' => true]);
+    exit;
+}
 
 $preapprovalId = $payload['data']['id'] ?? $_GET['id'] ?? $_POST['id'] ?? null;
 if (!$preapprovalId) {
     mp_log(date('c') . " | payload=" . $payloadRaw . " | error=missing_preapproval_id");
-    http_response_code(400);
-    echo json_encode(['success' => false, 'message' => 'ID da assinatura não informado.']);
+    echo json_encode(['success' => true]);
     exit;
 }
 
 $preapprovalResponse = mp_request('GET', "https://api.mercadopago.com/preapproval/{$preapprovalId}", $accessToken);
 if (!$preapprovalResponse['success']) {
     mp_log(date('c') . " | subId={$preapprovalId} | error=preapproval_fetch_failed | payload=" . $payloadRaw);
-    http_response_code(502);
-    echo json_encode(['success' => false, 'message' => 'Erro ao buscar assinatura no Mercado Pago.']);
+    echo json_encode(['success' => true]);
     exit;
 }
 
