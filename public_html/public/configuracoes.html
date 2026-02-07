@@ -708,29 +708,13 @@
         <div class="modal-header">
             <div class="modal-icon icon-info"><i class="ph ph-credit-card"></i></div>
             <h3 class="modal-title" id="modalPagamentoTitle">Pagamento da Assinatura</h3>
-            <p class="modal-desc" id="modalPagamentoDesc">Finalize o pagamento do plano mensal.</p>
+            <p class="modal-desc" id="modalPagamentoDesc">Você será redirecionado para concluir o pagamento.</p>
         </div>
         <div style="display:flex; align-items:center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 18px;">
             <div style="font-size: 13px; color:#444; font-weight: 600;">R$ 21,90 / mês</div>
-            <div style="font-size: 12px; color:#777;">5 dias grátis no teste</div>
+            <div style="font-size: 12px; color:#777;">5 dias grátis</div>
         </div>
-        <div id="sandboxPayerEmailField" style="display: none; margin-bottom: 16px;">
-            <label for="sandboxPayerEmailInput" style="font-size:11px; color:#999; font-weight:700; text-transform:uppercase; margin-bottom:5px; display:block;">E-mail do pagador de teste (buyer)</label>
-            <input type="email" id="sandboxPayerEmailInput" placeholder="ex: buyer_test_...@testuser.com" style="margin-bottom: 6px;">
-            <small style="display:block; color:#777; font-size:12px; line-height:1.4;">
-                No modo teste, use o e-mail do usuário BUYER criado no painel do provedor. Não use o e-mail do vendedor/collector.
-            </small>
-        </div>
-        <div id="checkoutLoading" class="checkout-loading">
-            <div class="spinner"></div>
-            <span>Carregando checkout seguro...</span>
-        </div>
-        <div style="margin-top: 12px;">
-            <iframe id="iframeCheckout" class="checkout-frame" src="about:blank" title="Checkout seguro" loading="lazy"></iframe>
-            <div id="checkoutFallbackMessage" class="checkout-fallback-message" style="display: none;">
-                Abrimos o pagamento em uma nova aba. Após concluir, volte para o app.
-            </div>
-        </div>
+        <p id="checkoutNotice" style="display: none; font-size: 12px; color:#666; margin-top: 12px;"></p>
         <div class="modal-actions" style="margin-top: 20px;">
             <button class="btn btn-secondary" data-modal-close="modalPagamento">Fechar</button>
             <button class="btn btn-primary" id="btnContinuarCheckout">Continuar</button>

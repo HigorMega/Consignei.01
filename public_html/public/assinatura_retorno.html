@@ -12,15 +12,6 @@
         .assinatura-card { max-width: 520px; }
         .assinatura-card h2 { margin: 0 0 6px 0; font-size: 22px; color: #1a1a1a; }
         .assinatura-card p { color: #666; font-size: 14px; margin-bottom: 16px; }
-        .status-box {
-            padding: 12px 14px;
-            border-radius: 10px;
-            background: #f6f6f6;
-            border: 1px solid #e5e5e5;
-            margin-bottom: 16px;
-            font-size: 13px;
-            color: #555;
-        }
         .btn-voltar {
             display: inline-flex;
             align-items: center;
@@ -43,18 +34,14 @@
             <i class="ph-fill ph-diamonds-four" style="color: var(--primary);"></i> Consignei
         </div>
 
-        <h2>Pagamento em processamento...</h2>
-        <p>Recebemos o retorno da sua assinatura. Em instantes sua conta será atualizada.</p>
-
-        <div class="status-box" id="statusBox">Validando seu pagamento com o gateway.</div>
-        <a class="btn-voltar" id="btnVoltar" href="/public/configuracoes.html" style="display: none;">Voltar para configurações</a>
+        <h2 id="statusText">Pagamento em processamento...</h2>
+        <a class="btn-voltar" id="btnVoltar" href="/public/dashboard.html">Voltar ao painel</a>
     </div>
 
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <script>
-        const statusBox = document.getElementById('statusBox');
+        const statusText = document.getElementById('statusText');
         const dashboardUrl = '/public/dashboard.html';
-        const voltarBtn = document.getElementById('btnVoltar');
         let attempts = 0;
 
         async function verificarStatusAssinatura() {
@@ -67,24 +54,18 @@
                         window.location.href = dashboardUrl;
                         return;
                     }
-                    if (statusBox) {
-                        statusBox.textContent = 'Pagamento em processamento... aguarde a confirmação.';
+                    if (statusText) {
+                        statusText.textContent = 'Pagamento em processamento...';
                     }
-                } else if (voltarBtn) {
-                    statusBox.textContent = 'Não conseguimos validar o pagamento no momento.';
-                    voltarBtn.style.display = 'inline-flex';
                 }
             } catch (error) {
-                if (statusBox) {
-                    statusBox.textContent = 'Ainda processando... aguarde.';
-                }
-                if (voltarBtn) {
-                    voltarBtn.style.display = 'inline-flex';
+                if (statusText) {
+                    statusText.textContent = 'Pagamento em processamento...';
                 }
             }
 
-            if (statusBox && attempts % 3 === 0) {
-                statusBox.textContent = 'Pagamento em processamento... você será redirecionado em instantes.';
+            if (statusText && attempts % 3 === 0) {
+                statusText.textContent = 'Pagamento em processamento...';
             }
             setTimeout(verificarStatusAssinatura, 4000);
         }
