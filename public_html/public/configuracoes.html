@@ -118,6 +118,15 @@
         .checkout-frame { width: 100%; min-height: 420px; border: 1px solid #f0f0f0; border-radius: 12px; background: #fff; }
         .checkout-loading { display: flex; align-items: center; gap: 10px; padding: 12px; background: #f8f9fb; border-radius: 12px; font-size: 12px; color: #666; }
         .checkout-loading .spinner { width: 24px; height: 24px; border-width: 3px; }
+        .checkout-fallback-message {
+            margin-top: 12px;
+            padding: 12px 14px;
+            border-radius: 10px;
+            background: #fff7e6;
+            border: 1px solid #f2d2a0;
+            font-size: 12px;
+            color: #7a4b00;
+        }
 
         /* MENU LATERAL */
         .sidebar { width: 260px; background: var(--white); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 25px; flex-shrink: 0; height: 100vh; z-index: 1000; }
@@ -710,6 +719,9 @@
         </div>
         <div style="margin-top: 12px;">
             <iframe id="iframeCheckout" class="checkout-frame" src="about:blank" title="Checkout seguro" loading="lazy"></iframe>
+            <div id="checkoutFallbackMessage" class="checkout-fallback-message" style="display: none;">
+                Abrimos o pagamento em uma nova aba. Após concluir, volte para o app.
+            </div>
         </div>
         <div class="modal-actions" style="margin-top: 20px;">
             <button class="btn btn-secondary" data-modal-close="modalPagamento">Fechar</button>

@@ -29,12 +29,43 @@
             <i class="ph-fill ph-diamonds-four" style="color: var(--primary);"></i> Consignei
         </div>
 
-        <h2>Assinatura em processamento</h2>
+        <h2>Pagamento em processamento...</h2>
         <p>Recebemos o retorno da sua assinatura. Em instantes sua conta será atualizada.</p>
 
-        <div class="status-box">Você já pode fechar esta página.</div>
+        <div class="status-box" id="statusBox">Validando seu pagamento com o gateway.</div>
     </div>
 
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script>
+        const statusBox = document.getElementById('statusBox');
+        const dashboardUrl = '/public/dashboard.html';
+        let attempts = 0;
+
+        async function verificarStatusAssinatura() {
+            attempts += 1;
+            try {
+                const response = await fetch('/api/billing_status.php', { credentials: 'include', cache: 'no-store' });
+                const payload = await response.json();
+                if (payload?.success && payload.status) {
+                    const status = payload.status.toString().toLowerCase();
+                    if (['authorized', 'active', 'approved'].includes(status)) {
+                        window.location.href = dashboardUrl;
+                        return;
+                    }
+                }
+            } catch (error) {
+                if (statusBox) {
+                    statusBox.textContent = 'Ainda processando... aguarde.';
+                }
+            }
+
+            if (statusBox && attempts % 3 === 0) {
+                statusBox.textContent = 'Pagamento em processamento... você será redirecionado em instantes.';
+            }
+            setTimeout(verificarStatusAssinatura, 4000);
+        }
+
+        verificarStatusAssinatura();
+    </script>
 </body>
 </html>
