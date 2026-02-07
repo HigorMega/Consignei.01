@@ -514,6 +514,13 @@
             <div style="font-size: 13px; color:#444; font-weight: 600;">R$ 21,90 / mês</div>
             <div style="font-size: 12px; color:#777;">5 dias grátis no teste</div>
         </div>
+        <div id="sandboxPayerEmailField" style="display: none; margin-bottom: 16px;">
+            <label for="sandboxPayerEmailInput" style="font-size:11px; color:#999; font-weight:700; text-transform:uppercase; margin-bottom:5px; display:block;">E-mail do pagador de teste (buyer)</label>
+            <input type="email" id="sandboxPayerEmailInput" placeholder="ex: buyer_test_...@testuser.com" style="margin-bottom: 6px;">
+            <small style="display:block; color:#777; font-size:12px; line-height:1.4;">
+                No modo teste, use o e-mail do usuário BUYER criado no painel do provedor. Não use o e-mail do vendedor/collector.
+            </small>
+        </div>
         <div id="checkoutLoading" class="checkout-loading">
             <div class="spinner"></div>
             <span>Carregando checkout seguro...</span>
@@ -526,6 +533,7 @@
         </div>
         <div class="modal-actions" style="margin-top: 20px;">
             <button class="btn btn-secondary" data-modal-close="modalPagamento">Fechar</button>
+            <button class="btn btn-primary" id="btnContinuarCheckout">Continuar</button>
         </div>
     </div>
 </div>

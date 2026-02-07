@@ -129,7 +129,9 @@ function parseDecimalInput(value) {
 // --- ASSINATURA / PAGAMENTOS ---
 const BillingUI = {
     pollTimeout: null,
-    polling: false
+    polling: false,
+    isSandbox: false,
+    envLoaded: false
 };
 
 function formatDateShort(dateStr) {
@@ -171,6 +173,10 @@ async function carregarStatusAssinaturaUI() {
         if (!payload || !payload.success) {
             throw new Error(payload?.message || 'Erro ao carregar status.');
         }
+
+        BillingUI.isSandbox = Boolean(payload.is_sandbox);
+        BillingUI.envLoaded = true;
+        setSandboxPayerFieldVisibility(BillingUI.isSandbox);
 
         const status = normalizeBillingStatus(payload.status);
         const labels = {
@@ -232,6 +238,39 @@ function toggleCheckoutFallbackMessage(show) {
     fallback.style.display = show ? 'block' : 'none';
 }
 
+function setSandboxPayerFieldVisibility(isSandbox) {
+    const field = document.getElementById('sandboxPayerEmailField');
+    const input = document.getElementById('sandboxPayerEmailInput');
+    if (field) {
+        field.style.display = isSandbox ? 'block' : 'none';
+    }
+    if (input) {
+        input.required = isSandbox;
+        if (!isSandbox) {
+            input.value = '';
+        }
+    }
+}
+
+async function carregarAmbienteBilling() {
+    try {
+        const response = await fetch(API.billing_status, { credentials: 'include' });
+        const payload = await response.json();
+        if (payload?.success) {
+            BillingUI.isSandbox = Boolean(payload.is_sandbox);
+            BillingUI.envLoaded = true;
+            setSandboxPayerFieldVisibility(BillingUI.isSandbox);
+            return BillingUI.isSandbox;
+        }
+    } catch (error) {
+        console.warn('Erro ao carregar ambiente de cobrança:', error);
+    }
+    BillingUI.isSandbox = false;
+    BillingUI.envLoaded = false;
+    setSandboxPayerFieldVisibility(false);
+    return false;
+}
+
 function limparCheckoutModal() {
     if (BillingUI.pollTimeout) {
         clearTimeout(BillingUI.pollTimeout);
@@ -279,15 +318,44 @@ async function iniciarCheckoutAssinatura(event) {
         event.preventDefault();
         event.stopPropagation();
     }
+    limparCheckoutModal();
     openModal('modalPagamento');
+    setCheckoutLoading(false);
+    toggleCheckoutFallbackMessage(false);
+    await carregarAmbienteBilling();
+}
+
+async function executarCheckoutAssinatura(event) {
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+    const payerInput = document.getElementById('sandboxPayerEmailInput');
+    const payerEmail = payerInput ? payerInput.value.trim() : '';
+
+    if (BillingUI.isSandbox && !payerEmail) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Informe o e-mail de teste',
+            text: 'No modo teste, informe o e-mail do BUYER de teste para continuar.'
+        });
+        return;
+    }
+
     setCheckoutLoading(true);
     toggleCheckoutFallbackMessage(false);
 
     try {
-        const response = await fetch(API.billing_checkout, { method: 'POST', credentials: 'include' });
+        const body = BillingUI.isSandbox ? { payer_email: payerEmail } : {};
+        const response = await fetch(API.billing_checkout, {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
         const payload = await response.json();
         if (!payload?.success || !payload.checkout_url) {
-            throw new Error(payload?.message || 'Não foi possível iniciar o pagamento.');
+            throw new Error(payload?.detail || payload?.message || 'Não foi possível iniciar o pagamento.');
         }
 
         const checkoutUrl = payload.checkout_url;
@@ -476,6 +544,11 @@ function setupStaticListeners() {
     const assinaturaBtn = document.getElementById('btnAssinaturaPrincipal');
     if (assinaturaBtn) {
         assinaturaBtn.addEventListener('click', iniciarCheckoutAssinatura);
+    }
+
+    const continuarCheckoutBtn = document.getElementById('btnContinuarCheckout');
+    if (continuarCheckoutBtn) {
+        continuarCheckoutBtn.addEventListener('click', executarCheckoutAssinatura);
     }
 
     const modalPagamento = document.getElementById('modalPagamento');
