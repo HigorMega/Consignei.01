@@ -37,15 +37,18 @@ try {
     }
 
     $price = (float) env('SUBSCRIPTION_PRICE', '21.90');
+    $appUrl = rtrim((string) env('APP_URL', ''), '/');
+    $externalReference = sprintf('loja:%d:ts:%d', $lojaId, time());
 
     $payload = [
-        'external_reference' => (string) $lojaId,
+        'external_reference' => $externalReference,
+        'notification_url' => $appUrl . '/api/pagamentos_webhook.php',
         'payer' => [
             'email' => $loja['email'] ?? null,
         ],
         'items' => [
             [
-                'id' => 'plan_monthly',
+                'id' => 'assinatura_mensal',
                 'title' => 'Assinatura Consignei - Plano Mensal',
                 'description' => 'Acesso ao sistema Consignei por 30 dias',
                 'category_id' => 'services',
