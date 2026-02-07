@@ -95,7 +95,7 @@ const atualizarStatus = (status) => {
     btnAssinar.textContent = 'Ativar assinatura';
     btnAssinar.onclick = async () => {
         btnAssinar.disabled = true;
-        btnAssinar.textContent = 'Redirecionando...';
+        btnAssinar.textContent = 'Processando...';
         try {
             const response = await fetch('../api/criar_assinatura_mp.php', {
                 method: 'POST',
@@ -103,12 +103,20 @@ const atualizarStatus = (status) => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({}),
             });
+
             const data = await readJsonResponse(response);
-            if (response.ok && data.init_point) {
+
+            if (!response.ok) {
+                alert(data.message || 'Não foi possível iniciar a assinatura.');
+                return;
+            }
+
+            if (data.success && data.init_point) {
                 window.location.href = data.init_point;
                 return;
             }
-            throw new Error(data.message || 'Falha ao criar assinatura.');
+
+            alert(data.message || 'Não foi possível iniciar a assinatura.');
         } catch (error) {
             alert('Não foi possível iniciar a assinatura. Tente novamente.');
         } finally {
