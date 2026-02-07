@@ -79,10 +79,38 @@ try {
     $notificationUrl = $appUrl . '/api/billing_webhook.php';
     $backUrl = $appUrl . '/public/assinatura_retorno.html';
 
+    $rawBody = file_get_contents('php://input');
+    $requestData = [];
+    if (is_string($rawBody) && $rawBody !== '') {
+        $decoded = json_decode($rawBody, true);
+        if (is_array($decoded)) {
+            $requestData = $decoded;
+        }
+    }
+    if (!$requestData && !empty($_POST)) {
+        $requestData = $_POST;
+    }
+
+    $isSandbox = strtolower((string) env('MP_MODE', '')) === 'sandbox' || str_starts_with($accessToken, 'TEST-');
+    $payerEmail = null;
+    if ($isSandbox && !empty($requestData['payer_email']) && is_string($requestData['payer_email'])) {
+        $candidateEmail = trim($requestData['payer_email']);
+        if (filter_var($candidateEmail, FILTER_VALIDATE_EMAIL)) {
+            $payerEmail = $candidateEmail;
+        }
+    }
+
+    billing_checkout_log([
+        'context' => 'payer_email_handling',
+        'payer_email_included' => $payerEmail !== null,
+        'reason' => $payerEmail !== null
+            ? 'payer_email provided by frontend in sandbox'
+            : 'payer_email removed from payload',
+    ]);
+
     $payload = [
         'reason' => $reason,
         'external_reference' => (string) $lojaId,
-        'payer_email' => $loja['email'] ?? '',
         'auto_recurring' => [
             'frequency' => 1,
             'frequency_type' => 'months',
@@ -93,6 +121,10 @@ try {
         'notification_url' => $notificationUrl,
         'back_url' => $backUrl,
     ];
+
+    if ($payerEmail !== null) {
+        $payload['payer_email'] = $payerEmail;
+    }
 
     $endpoint = 'https://api.mercadopago.com/preapproval';
     $response = null;
@@ -150,7 +182,28 @@ try {
 
     $data = json_decode($response, true);
     if ($httpCode >= 400) {
-        billing_checkout_json_error($httpCode, 'Erro interno', 'Erro ao criar assinatura', [
+        $detail = 'Erro ao criar assinatura';
+        $providerMessage = '';
+        if (is_array($data)) {
+            if (!empty($data['message']) && is_string($data['message'])) {
+                $providerMessage = $data['message'];
+            } elseif (!empty($data['cause']) && is_array($data['cause'])) {
+                $messages = array_filter(array_map(static fn ($cause) => is_array($cause) && !empty($cause['description'])
+                    ? (string) $cause['description']
+                    : null, $data['cause']));
+                $providerMessage = implode(' | ', $messages);
+            }
+        }
+        $normalizedMessage = strtolower($providerMessage);
+        if (
+            $isSandbox
+            && $normalizedMessage
+            && (str_contains($normalizedMessage, 'payer') || str_contains($normalizedMessage, 'collector'))
+        ) {
+            $detail = 'No modo teste, use uma conta buyer de teste diferente do seller. Abra o checkout em janela anônima.';
+        }
+
+        billing_checkout_json_error($httpCode, 'Erro interno', $detail, [
             'provider_http_status' => $httpCode,
             'provider_response' => $response,
         ]);
@@ -160,7 +213,6 @@ try {
         billing_checkout_json_error(500, 'Erro interno', 'Resposta inválida ao criar assinatura.');
     }
 
-    $isSandbox = strtolower((string) env('MP_MODE', '')) === 'sandbox' || str_starts_with($accessToken, 'TEST-');
     $checkoutUrl = $isSandbox ? ($data['sandbox_init_point'] ?? null) : ($data['init_point'] ?? null);
     if (!$checkoutUrl) {
         billing_checkout_json_error(500, 'Erro interno', 'Checkout não retornou URL.');
