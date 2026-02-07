@@ -79,33 +79,39 @@ try {
     $notificationUrl = $appUrl . '/api/billing_webhook.php';
     $backUrl = $appUrl . '/public/assinatura_retorno.html';
 
-    $rawBody = file_get_contents('php://input');
-    $requestData = [];
-    if (is_string($rawBody) && $rawBody !== '') {
-        $decoded = json_decode($rawBody, true);
-        if (is_array($decoded)) {
-            $requestData = $decoded;
-        }
-    }
-    if (!$requestData && !empty($_POST)) {
-        $requestData = $_POST;
-    }
+    $input = json_decode(file_get_contents('php://input'), true) ?: [];
+    $payerEmail = trim((string) ($input['payer_email'] ?? ''));
 
     $isSandbox = strtolower((string) env('MP_MODE', '')) === 'sandbox' || str_starts_with($accessToken, 'TEST-');
-    $payerEmail = null;
-    if ($isSandbox && !empty($requestData['payer_email']) && is_string($requestData['payer_email'])) {
-        $candidateEmail = trim($requestData['payer_email']);
-        if (filter_var($candidateEmail, FILTER_VALIDATE_EMAIL)) {
-            $payerEmail = $candidateEmail;
-        }
+    if ($isSandbox && $payerEmail === '') {
+        billing_checkout_json_error(400, 'validation_error', 'Informe o e-mail do BUYER de teste.');
+    }
+    if (!$isSandbox) {
+        $payerEmail = trim((string) ($loja['email'] ?? ''));
+    }
+
+    if ($payerEmail === '') {
+        billing_checkout_json_error(400, 'validation_error', 'Informe o e-mail do pagador.');
+    }
+    if (!filter_var($payerEmail, FILTER_VALIDATE_EMAIL)) {
+        billing_checkout_json_error(400, 'validation_error', 'E-mail do pagador inválido.');
+    }
+    if (
+        $isSandbox
+        && !empty($loja['email'])
+        && strtolower($payerEmail) === strtolower((string) $loja['email'])
+    ) {
+        billing_checkout_json_error(
+            400,
+            'validation_error',
+            'No modo teste, use o e-mail do BUYER de teste diferente do vendedor/collector.'
+        );
     }
 
     billing_checkout_log([
         'context' => 'payer_email_handling',
-        'payer_email_included' => $payerEmail !== null,
-        'reason' => $payerEmail !== null
-            ? 'payer_email provided by frontend in sandbox'
-            : 'payer_email removed from payload',
+        'is_sandbox' => $isSandbox,
+        'payer_email_included' => true,
     ]);
 
     $payload = [
@@ -122,9 +128,7 @@ try {
         'back_url' => $backUrl,
     ];
 
-    if ($payerEmail !== null) {
-        $payload['payer_email'] = $payerEmail;
-    }
+    $payload['payer_email'] = $payerEmail;
 
     $endpoint = 'https://api.mercadopago.com/preapproval';
     $response = null;
@@ -195,12 +199,17 @@ try {
             }
         }
         $normalizedMessage = strtolower($providerMessage);
-        if (
-            $isSandbox
-            && $normalizedMessage
-            && (str_contains($normalizedMessage, 'payer') || str_contains($normalizedMessage, 'collector'))
-        ) {
-            $detail = 'No modo teste, use uma conta buyer de teste diferente do seller. Abra o checkout em janela anônima.';
+        if ($normalizedMessage) {
+            if (str_contains($normalizedMessage, 'payer and collector cannot be the same user')) {
+                $detail = 'O e-mail do pagador não pode ser o mesmo do vendedor. Use um BUYER diferente.';
+            } elseif (str_contains($normalizedMessage, 'both payer and collector must be real or test users')) {
+                $detail = 'Use contas BUYER/SELLER válidas (teste ou produção). No modo teste, use um BUYER de teste.';
+            } elseif (
+                $isSandbox
+                && (str_contains($normalizedMessage, 'payer') || str_contains($normalizedMessage, 'collector'))
+            ) {
+                $detail = 'No modo teste, use uma conta buyer de teste diferente do seller. Abra o checkout em janela anônima.';
+            }
         }
 
         billing_checkout_json_error($httpCode, 'Erro interno', $detail, [

@@ -100,6 +100,10 @@ try {
         'paid_until' => $paidUntil ? $paidUntil->format('Y-m-d') : null,
     ];
 
+    $accessToken = (string) env('MP_ACCESS_TOKEN');
+    $response['is_sandbox'] = strtolower((string) env('MP_MODE', '')) === 'sandbox'
+        || ($accessToken !== '' && str_starts_with($accessToken, 'TEST-'));
+
     echo json_encode($response, JSON_UNESCAPED_UNICODE);
 } catch (Throwable $e) {
     billing_json_error(500, 'Erro interno', $e->getMessage());
