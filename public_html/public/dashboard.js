@@ -130,8 +130,7 @@ function parseDecimalInput(value) {
 const BillingUI = {
     pollTimeout: null,
     polling: false,
-    isSandbox: false,
-    envLoaded: false
+    noticeVisible: false
 };
 
 function formatDateShort(dateStr) {
@@ -174,10 +173,6 @@ async function carregarStatusAssinaturaUI() {
         if (!payload || !payload.success) {
             throw new Error(payload?.message || 'Erro ao carregar status.');
         }
-
-        BillingUI.isSandbox = Boolean(payload.is_sandbox);
-        BillingUI.envLoaded = true;
-        setSandboxPayerFieldVisibility(BillingUI.isSandbox);
 
         const status = normalizeBillingStatus(payload.status);
         const labels = {
@@ -229,50 +224,14 @@ async function carregarStatusAssinaturaUI() {
     }
 }
 
-function setCheckoutLoading(isLoading) {
-    const loading = document.getElementById('checkoutLoading');
-    const iframe = document.getElementById('iframeCheckout');
-    if (loading) loading.style.display = isLoading ? 'flex' : 'none';
-    if (iframe) iframe.style.opacity = isLoading ? '0.4' : '1';
-}
-
-function toggleCheckoutFallbackMessage(show) {
-    const fallback = document.getElementById('checkoutFallbackMessage');
-    if (!fallback) return;
-    fallback.style.display = show ? 'block' : 'none';
-}
-
-function setSandboxPayerFieldVisibility(isSandbox) {
-    const field = document.getElementById('sandboxPayerEmailField');
-    const input = document.getElementById('sandboxPayerEmailInput');
-    if (field) {
-        field.style.display = isSandbox ? 'block' : 'none';
+function setCheckoutNotice(show, text) {
+    const notice = document.getElementById('checkoutNotice');
+    if (!notice) return;
+    notice.style.display = show ? 'block' : 'none';
+    if (text) {
+        notice.textContent = text;
     }
-    if (input) {
-        input.required = isSandbox;
-        if (!isSandbox) {
-            input.value = '';
-        }
-    }
-}
-
-async function carregarAmbienteBilling() {
-    try {
-        const response = await fetch(API.billing_status, { credentials: 'include' });
-        const payload = await response.json();
-        if (payload?.success) {
-            BillingUI.isSandbox = Boolean(payload.is_sandbox);
-            BillingUI.envLoaded = true;
-            setSandboxPayerFieldVisibility(BillingUI.isSandbox);
-            return BillingUI.isSandbox;
-        }
-    } catch (error) {
-        console.warn('Erro ao carregar ambiente de cobrança:', error);
-    }
-    BillingUI.isSandbox = false;
-    BillingUI.envLoaded = false;
-    setSandboxPayerFieldVisibility(false);
-    return false;
+    BillingUI.noticeVisible = show;
 }
 
 function limparCheckoutModal() {
@@ -281,10 +240,7 @@ function limparCheckoutModal() {
         BillingUI.pollTimeout = null;
     }
     BillingUI.polling = false;
-    const iframe = document.getElementById('iframeCheckout');
-    if (iframe) iframe.src = 'about:blank';
-    setCheckoutLoading(false);
-    toggleCheckoutFallbackMessage(false);
+    setCheckoutNotice(false);
 }
 
 function iniciarPollingAssinatura() {
@@ -303,15 +259,14 @@ function iniciarPollingAssinatura() {
                     closeModal('modalPagamento');
                     limparCheckoutModal();
                     await carregarStatusAssinaturaUI();
-                    Swal.fire({ icon: 'success', title: 'Assinatura ativada com sucesso', text: 'Seu plano já está ativo.' });
+                    Swal.fire({ icon: 'success', title: 'Assinatura ativada', text: 'Seu plano já está ativo.' });
                     return;
                 }
             }
         } catch (error) {
             console.warn('Polling assinatura:', error);
         }
-        const delay = 4000 + Math.floor(Math.random() * 2000);
-        BillingUI.pollTimeout = setTimeout(poll, delay);
+        BillingUI.pollTimeout = setTimeout(poll, 5000);
     };
 
     poll();
@@ -324,9 +279,7 @@ async function iniciarCheckoutAssinatura(event) {
     }
     limparCheckoutModal();
     openModal('modalPagamento');
-    setCheckoutLoading(false);
-    toggleCheckoutFallbackMessage(false);
-    await carregarAmbienteBilling();
+    setCheckoutNotice(false);
 }
 
 async function executarCheckoutAssinatura(event) {
@@ -334,28 +287,12 @@ async function executarCheckoutAssinatura(event) {
         event.preventDefault();
         event.stopPropagation();
     }
-    const payerInput = document.getElementById('sandboxPayerEmailInput');
-    const payerEmail = payerInput ? payerInput.value.trim() : '';
-
-    if (BillingUI.isSandbox && !payerEmail) {
-        Swal.fire({
-            icon: 'warning',
-            title: 'Informe o e-mail de teste',
-            text: 'No modo teste, informe o e-mail do BUYER de teste para continuar.'
-        });
-        return;
-    }
-
-    setCheckoutLoading(true);
-    toggleCheckoutFallbackMessage(false);
-
     try {
-        const body = BillingUI.isSandbox ? { payer_email: payerEmail } : {};
         const response = await fetch(API.billing_checkout, {
             method: 'POST',
             credentials: 'include',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body)
+            body: JSON.stringify({})
         });
         const payload = await response.json();
         if (!payload?.success || !payload.checkout_url) {
@@ -364,47 +301,10 @@ async function executarCheckoutAssinatura(event) {
 
         const checkoutUrl = payload.checkout_url;
         console.log('checkout_url:', checkoutUrl);
-
-        const iframe = document.getElementById('iframeCheckout');
-        if (iframe) {
-            let loaded = false;
-            let fallbackTriggered = false;
-
-            const openFallback = (reason) => {
-                if (fallbackTriggered) return;
-                fallbackTriggered = true;
-                console.warn('Erro de carregamento do iframe:', reason || 'timeout');
-                window.open(checkoutUrl, '_blank');
-                toggleCheckoutFallbackMessage(true);
-                setCheckoutLoading(false);
-            };
-
-            const fallbackTimeout = setTimeout(() => {
-                if (!loaded) {
-                    openFallback('timeout');
-                }
-            }, 2500);
-
-            iframe.onload = () => {
-                if (fallbackTriggered) return;
-                loaded = true;
-                clearTimeout(fallbackTimeout);
-                setCheckoutLoading(false);
-            };
-            iframe.onerror = (event) => {
-                clearTimeout(fallbackTimeout);
-                openFallback(event);
-            };
-
-            iframe.src = checkoutUrl;
-        } else {
-            setCheckoutLoading(false);
-            window.open(checkoutUrl, '_blank');
-            toggleCheckoutFallbackMessage(true);
-        }
+        window.open(checkoutUrl, '_blank');
+        setCheckoutNotice(true, 'Pagamento aberto em nova aba. Após concluir, volte para o app.');
         iniciarPollingAssinatura();
     } catch (error) {
-        setCheckoutLoading(false);
         Swal.fire({ icon: 'error', title: 'Erro', text: error.message || 'Falha ao iniciar o pagamento.' });
     }
 }
