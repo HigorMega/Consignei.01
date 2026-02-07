@@ -226,6 +226,12 @@ function setCheckoutLoading(isLoading) {
     if (iframe) iframe.style.opacity = isLoading ? '0.4' : '1';
 }
 
+function toggleCheckoutFallbackMessage(show) {
+    const fallback = document.getElementById('checkoutFallbackMessage');
+    if (!fallback) return;
+    fallback.style.display = show ? 'block' : 'none';
+}
+
 function limparCheckoutModal() {
     if (BillingUI.pollTimeout) {
         clearTimeout(BillingUI.pollTimeout);
@@ -235,6 +241,7 @@ function limparCheckoutModal() {
     const iframe = document.getElementById('iframeCheckout');
     if (iframe) iframe.src = 'about:blank';
     setCheckoutLoading(false);
+    toggleCheckoutFallbackMessage(false);
 }
 
 function iniciarPollingAssinatura() {
@@ -274,6 +281,7 @@ async function iniciarCheckoutAssinatura(event) {
     }
     openModal('modalPagamento');
     setCheckoutLoading(true);
+    toggleCheckoutFallbackMessage(false);
 
     try {
         const response = await fetch(API.billing_checkout, { method: 'POST', credentials: 'include' });
@@ -282,12 +290,45 @@ async function iniciarCheckoutAssinatura(event) {
             throw new Error(payload?.message || 'Não foi possível iniciar o pagamento.');
         }
 
+        const checkoutUrl = payload.checkout_url;
+        console.log('checkout_url:', checkoutUrl);
+
         const iframe = document.getElementById('iframeCheckout');
         if (iframe) {
-            iframe.onload = () => setCheckoutLoading(false);
-            iframe.src = payload.checkout_url;
+            let loaded = false;
+            let fallbackTriggered = false;
+
+            const openFallback = (reason) => {
+                if (fallbackTriggered) return;
+                fallbackTriggered = true;
+                console.warn('Erro de carregamento do iframe:', reason || 'timeout');
+                window.open(checkoutUrl, '_blank');
+                toggleCheckoutFallbackMessage(true);
+                setCheckoutLoading(false);
+            };
+
+            const fallbackTimeout = setTimeout(() => {
+                if (!loaded) {
+                    openFallback('timeout');
+                }
+            }, 2500);
+
+            iframe.onload = () => {
+                if (fallbackTriggered) return;
+                loaded = true;
+                clearTimeout(fallbackTimeout);
+                setCheckoutLoading(false);
+            };
+            iframe.onerror = (event) => {
+                clearTimeout(fallbackTimeout);
+                openFallback(event);
+            };
+
+            iframe.src = checkoutUrl;
         } else {
             setCheckoutLoading(false);
+            window.open(checkoutUrl, '_blank');
+            toggleCheckoutFallbackMessage(true);
         }
         iniciarPollingAssinatura();
     } catch (error) {
