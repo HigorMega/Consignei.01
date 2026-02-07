@@ -21,6 +21,20 @@
             font-size: 13px;
             color: #555;
         }
+        .btn-voltar {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 10px 18px;
+            border: none;
+            border-radius: 10px;
+            background: #111;
+            color: #fff;
+            font-size: 13px;
+            cursor: pointer;
+            text-decoration: none;
+        }
     </style>
 </head>
 <body>
@@ -33,12 +47,14 @@
         <p>Recebemos o retorno da sua assinatura. Em instantes sua conta será atualizada.</p>
 
         <div class="status-box" id="statusBox">Validando seu pagamento com o gateway.</div>
+        <a class="btn-voltar" id="btnVoltar" href="/public/configuracoes.html" style="display: none;">Voltar para configurações</a>
     </div>
 
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <script>
         const statusBox = document.getElementById('statusBox');
         const dashboardUrl = '/public/dashboard.html';
+        const voltarBtn = document.getElementById('btnVoltar');
         let attempts = 0;
 
         async function verificarStatusAssinatura() {
@@ -46,16 +62,24 @@
             try {
                 const response = await fetch('/api/billing_status.php', { credentials: 'include', cache: 'no-store' });
                 const payload = await response.json();
-                if (payload?.success && payload.status) {
-                    const status = payload.status.toString().toLowerCase();
-                    if (['authorized', 'active', 'approved'].includes(status)) {
+                if (payload?.success) {
+                    if (payload.active) {
                         window.location.href = dashboardUrl;
                         return;
                     }
+                    if (statusBox) {
+                        statusBox.textContent = 'Pagamento em processamento... aguarde a confirmação.';
+                    }
+                } else if (voltarBtn) {
+                    statusBox.textContent = 'Não conseguimos validar o pagamento no momento.';
+                    voltarBtn.style.display = 'inline-flex';
                 }
             } catch (error) {
                 if (statusBox) {
                     statusBox.textContent = 'Ainda processando... aguarde.';
+                }
+                if (voltarBtn) {
+                    voltarBtn.style.display = 'inline-flex';
                 }
             }
 

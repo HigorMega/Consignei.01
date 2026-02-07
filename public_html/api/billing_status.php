@@ -27,6 +27,9 @@ function billing_normalize_status(?string $status): string
     if (in_array($status, ['authorized', 'active', 'approved'], true)) {
         return 'active';
     }
+    if (in_array($status, ['paused', 'suspended'], true)) {
+        return 'paused';
+    }
     if (in_array($status, ['trial', 'testing'], true)) {
         return 'trial';
     }
@@ -91,13 +94,14 @@ try {
         }
     }
 
+    $trialActive = $trialUntil ? $now <= $trialUntil : false;
+    $paidActive = $paidUntil ? $now <= $paidUntil : false;
     $response = [
         'success' => true,
         'status' => $status,
-        'price' => 21.90,
-        'trial_days' => 5,
         'trial_until' => $trialUntil ? $trialUntil->format('Y-m-d') : null,
         'paid_until' => $paidUntil ? $paidUntil->format('Y-m-d') : null,
+        'active' => $trialActive || $paidActive,
     ];
 
     $accessToken = (string) env('MP_ACCESS_TOKEN');

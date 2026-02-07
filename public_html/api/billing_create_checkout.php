@@ -68,9 +68,18 @@ try {
         billing_checkout_json_error(404, 'Erro interno', 'Loja não encontrada.');
     }
 
-    $price = 21.90;
-    $trialDays = 5;
-    $reason = 'Plano Mensal';
+    $price = (float) env('SUBSCRIPTION_PRICE', '21.90');
+    if ($price <= 0) {
+        $price = 21.90;
+    }
+    $trialDays = (int) env('SUBSCRIPTION_TRIAL_DAYS', '5');
+    if ($trialDays < 0) {
+        $trialDays = 0;
+    }
+    $reason = trim((string) env('SUBSCRIPTION_REASON', 'Plano Mensal'));
+    if ($reason === '') {
+        $reason = 'Plano Mensal';
+    }
     $startDate = sh_format_mp_datetime(
         (new DateTimeImmutable('now'))
             ->modify(sprintf('+%d days', max(0, $trialDays)))
@@ -222,7 +231,7 @@ try {
         billing_checkout_json_error(500, 'Erro interno', 'Resposta inválida ao criar assinatura.');
     }
 
-    $checkoutUrl = $isSandbox ? ($data['sandbox_init_point'] ?? null) : ($data['init_point'] ?? null);
+    $checkoutUrl = $isSandbox ? ($data['sandbox_init_point'] ?? $data['init_point'] ?? null) : ($data['init_point'] ?? null);
     if (!$checkoutUrl) {
         billing_checkout_json_error(500, 'Erro interno', 'Checkout não retornou URL.');
     }

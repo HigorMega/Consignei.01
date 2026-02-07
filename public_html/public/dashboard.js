@@ -145,6 +145,7 @@ function normalizeBillingStatus(status) {
     if (!status) return 'pending';
     const normalized = status.toString().toLowerCase();
     if (['authorized', 'active', 'approved'].includes(normalized)) return 'active';
+    if (['paused', 'suspended'].includes(normalized)) return 'paused';
     if (['trial', 'testing'].includes(normalized)) return 'trial';
     if (['expired', 'overdue'].includes(normalized)) return 'expired';
     if (['cancelled', 'canceled'].includes(normalized)) return 'cancelled';
@@ -154,7 +155,7 @@ function normalizeBillingStatus(status) {
 function updateAssinaturaBadge(status) {
     const badge = document.getElementById('assinaturaStatusBadge');
     if (!badge) return;
-    badge.classList.remove('status-active', 'status-trial', 'status-pending', 'status-expired', 'status-cancelled');
+    badge.classList.remove('status-active', 'status-trial', 'status-pending', 'status-expired', 'status-cancelled', 'status-paused');
     badge.classList.add(`status-${status}`);
 }
 
@@ -184,7 +185,8 @@ async function carregarStatusAssinaturaUI() {
             active: 'Ativa',
             pending: 'Pendente',
             expired: 'Vencida',
-            cancelled: 'Cancelada'
+            cancelled: 'Cancelada',
+            paused: 'Pausada'
         };
 
         const label = labels[status] || 'Pendente';
@@ -206,6 +208,8 @@ async function carregarStatusAssinaturaUI() {
             info = 'Renovação pendente';
         } else if (status === 'cancelled') {
             info = 'Assinatura cancelada';
+        } else if (status === 'paused') {
+            info = 'Assinatura pausada';
         }
 
         statusDate.textContent = info;
@@ -294,7 +298,7 @@ function iniciarPollingAssinatura() {
             const payload = await response.json();
             if (payload?.success) {
                 const status = normalizeBillingStatus(payload.status);
-                if (status === 'active') {
+                if (payload.active || status === 'active') {
                     BillingUI.polling = false;
                     closeModal('modalPagamento');
                     limparCheckoutModal();
