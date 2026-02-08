@@ -64,7 +64,17 @@ try {
     }
 
     $lojaId = (int)$_SESSION['loja_id'];
-    $method = strtolower((string) ($_GET['method'] ?? $_POST['method'] ?? 'all'));
+    $inputData = [];
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $rawBody = file_get_contents('php://input');
+        if ($rawBody) {
+            $decoded = json_decode($rawBody, true);
+            if (is_array($decoded)) {
+                $inputData = $decoded;
+            }
+        }
+    }
+    $method = strtolower((string) ($_GET['method'] ?? $_POST['method'] ?? $inputData['method'] ?? 'all'));
     if (!in_array($method, ['all', 'pix', 'boleto'], true)) {
         $method = 'all';
     }
@@ -122,6 +132,14 @@ try {
     $payerInfo = mp_resolve_payer_email($loja['email'] ?? null);
     $payerFirstName = trim((string) ($loja['payer_first_name'] ?? ''));
     $payerLastName = trim((string) ($loja['payer_last_name'] ?? ''));
+    $payerFirstOverride = trim((string) ($_GET['payer_first_name'] ?? $_POST['payer_first_name'] ?? $inputData['payer_first_name'] ?? ''));
+    $payerLastOverride = trim((string) ($_GET['payer_last_name'] ?? $_POST['payer_last_name'] ?? $inputData['payer_last_name'] ?? ''));
+    if ($payerFirstOverride !== '') {
+        $payerFirstName = $payerFirstOverride;
+    }
+    if ($payerLastOverride !== '') {
+        $payerLastName = $payerLastOverride;
+    }
     $nomeLoja = trim((string) ($loja['nome_loja'] ?? ''));
 
     if (($payerFirstName === '' || $payerLastName === '') && $nomeLoja !== '') {
