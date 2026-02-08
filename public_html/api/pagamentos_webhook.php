@@ -11,51 +11,23 @@ http_response_code(200);
 
 require_once "../db/conexao.php";
 require_once __DIR__ . "/subscription_helpers.php";
-
-function mp_log_payment(string $message): void
-{
-    $logDir = __DIR__ . '/../logs';
-    if (!is_dir($logDir)) {
-        mkdir($logDir, 0755, true);
-    }
-    file_put_contents($logDir . '/pagamentos_webhook.log', $message . PHP_EOL, FILE_APPEND | LOCK_EX);
-}
-
-function mp_fetch_payment(string $paymentId, string $accessToken): array
-{
-    $ch = curl_init("https://api.mercadopago.com/v1/payments/{$paymentId}");
-    curl_setopt_array($ch, [
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_HTTPHEADER => [
-            'Authorization: Bearer ' . $accessToken,
-            'Content-Type: application/json',
-        ],
-    ]);
-
-    $response = curl_exec($ch);
-    $curlError = curl_error($ch);
-    $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
-
-    if ($response === false) {
-        return ['success' => false, 'error' => $curlError, 'status' => $httpCode];
-    }
-
-    return [
-        'success' => $httpCode >= 200 && $httpCode < 300,
-        'status' => $httpCode,
-        'data' => json_decode($response, true),
-        'raw' => $response,
-    ];
-}
+require_once __DIR__ . "/../lib/mercadopago.php";
 
 $rawBody = file_get_contents('php://input') ?: '';
 $payload = json_decode($rawBody, true) ?: [];
-mp_log_payment(date('c') . ' | payload=' . $rawBody);
+$headers = mp_get_request_headers();
 
-$accessToken = env('MP_ACCESS_TOKEN');
+mp_log('payment_webhook_received', ['payload' => $payload]);
+
+if (!mp_validate_webhook_signature($rawBody, $headers)) {
+    mp_log('payment_webhook_invalid_signature');
+    echo json_encode(['ok' => true], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+$accessToken = mp_get_access_token();
 if (!$accessToken) {
-    mp_log_payment(date('c') . ' | error=missing_access_token');
+    mp_log('payment_webhook_missing_token');
     echo json_encode(['ok' => true], JSON_UNESCAPED_UNICODE);
     exit;
 }
@@ -65,14 +37,27 @@ if (!$paymentId && !empty($_GET['data.id'])) {
     $paymentId = $_GET['data.id'];
 }
 if (!$paymentId) {
-    mp_log_payment(date('c') . ' | error=missing_payment_id');
+    mp_log('payment_webhook_missing_payment_id', ['payload' => $payload]);
     echo json_encode(['ok' => true], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
-$paymentResponse = mp_fetch_payment((string) $paymentId, $accessToken);
+$eventType = (string) ($payload['type'] ?? 'payment');
+$action = isset($payload['action']) ? (string) $payload['action'] : null;
+$stored = mp_store_webhook_event($pdo, $payload, $headers, (string) $paymentId, $eventType, $action);
+if ($stored['duplicate']) {
+    mp_log('payment_webhook_duplicate', ['event_id' => $stored['event_id']]);
+    echo json_encode(['ok' => true], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+$paymentResponse = mp_get_payment((string) $paymentId);
 if (!$paymentResponse['success']) {
-    mp_log_payment(date('c') . ' | paymentId=' . $paymentId . ' | error=payment_fetch_failed | status=' . $paymentResponse['status']);
+    mp_log('payment_webhook_fetch_failed', [
+        'payment_id' => $paymentId,
+        'status' => $paymentResponse['status'],
+        'request_id' => $paymentResponse['request_id'] ?? null,
+    ]);
     echo json_encode(['ok' => true], JSON_UNESCAPED_UNICODE);
     exit;
 }
@@ -84,12 +69,7 @@ $transactionAmount = isset($payment['transaction_amount']) ? (float) $payment['t
 $currencyId = $payment['currency_id'] ?? null;
 $paidAt = sh_parse_datetime($payment['date_approved'] ?? $payment['date_created'] ?? null);
 
-$invoiceStatus = 'pending';
-if (in_array($paymentStatus, ['approved', 'authorized'], true)) {
-    $invoiceStatus = 'paid';
-} elseif (in_array($paymentStatus, ['rejected', 'cancelled', 'refunded', 'charged_back'], true)) {
-    $invoiceStatus = 'failed';
-}
+$invoiceStatus = mp_map_payment_status($paymentStatus);
 
 $invoice = null;
 $invoiceId = null;
@@ -108,53 +88,75 @@ if ($externalReference) {
     }
 }
 
+if (!$invoice && sh_column_exists($pdo, 'invoices', 'mp_payment_id')) {
+    $stmt = $pdo->prepare("SELECT id, loja_id FROM invoices WHERE mp_payment_id = ? LIMIT 1");
+    $stmt->execute([(string) $paymentId]);
+    $invoice = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+}
+
 if ($invoice) {
     $invoiceId = (int) $invoice['id'];
     $lojaId = (int) $invoice['loja_id'];
 } else {
-    mp_log_payment(date('c') . ' | paymentId=' . $paymentId . ' | error=invoice_not_found | external_reference=' . ($externalReference ?? 'null'));
+    mp_log('payment_webhook_invoice_not_found', [
+        'payment_id' => $paymentId,
+        'external_reference' => $externalReference,
+    ]);
     echo json_encode(['ok' => true], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
-$updateColumns = ['mp_payment_id = ?', 'status = ?'];
-$updateValues = [$paymentId, $invoiceStatus];
+$pdo->beginTransaction();
+try {
+    $updateColumns = ['mp_payment_id = ?', 'status = ?'];
+    $updateValues = [$paymentId, $invoiceStatus];
 
-if ($transactionAmount !== null) {
-    $updateColumns[] = 'amount = ?';
-    $updateValues[] = $transactionAmount;
-}
-if ($currencyId) {
-    $updateColumns[] = 'currency = ?';
-    $updateValues[] = $currencyId;
-}
-if (sh_column_exists($pdo, 'invoices', 'external_reference') && $externalReference) {
-    $updateColumns[] = 'external_reference = ?';
-    $updateValues[] = (string) $externalReference;
+    if ($transactionAmount !== null) {
+        $updateColumns[] = 'amount = ?';
+        $updateValues[] = $transactionAmount;
+    }
+    if ($currencyId) {
+        $updateColumns[] = 'currency = ?';
+        $updateValues[] = $currencyId;
+    }
+    if (sh_column_exists($pdo, 'invoices', 'external_reference') && $externalReference) {
+        $updateColumns[] = 'external_reference = ?';
+        $updateValues[] = (string) $externalReference;
+    }
+
+    $updateColumns[] = 'paid_at = ?';
+    if ($invoiceStatus === 'paid' && $paidAt) {
+        $updateValues[] = $paidAt->format('Y-m-d H:i:s');
+    } else {
+        $updateValues[] = null;
+    }
+
+    $updateValues[] = $invoiceId;
+    if ($updateColumns) {
+        $stmtUpdate = $pdo->prepare(
+            "UPDATE invoices SET " . implode(', ', $updateColumns) . " WHERE id = ?"
+        );
+        $stmtUpdate->execute($updateValues);
+    }
+
+    if ($invoiceStatus === 'paid' && $lojaId && sh_column_exists($pdo, 'lojas', 'paid_until')) {
+        $paidUntil = (new DateTimeImmutable('now'))->modify('+1 month')->format('Y-m-d H:i:s');
+        $stmtUpdateLoja = $pdo->prepare("UPDATE lojas SET paid_until = ? WHERE id = ?");
+        $stmtUpdateLoja->execute([$paidUntil, $lojaId]);
+    }
+
+    $pdo->commit();
+} catch (Throwable $e) {
+    $pdo->rollBack();
+    mp_log('payment_webhook_db_error', ['error' => $e->getMessage()]);
 }
 
-$updateColumns[] = 'paid_at = ?';
-if ($invoiceStatus === 'paid' && $paidAt) {
-    $updateValues[] = $paidAt->format('Y-m-d H:i:s');
-} else {
-    $updateValues[] = null;
-}
-
-$updateValues[] = $invoiceId;
-if ($updateColumns) {
-    $stmtUpdate = $pdo->prepare(
-        "UPDATE invoices SET " . implode(', ', $updateColumns) . " WHERE id = ?"
-    );
-    $stmtUpdate->execute($updateValues);
-}
-
-if ($invoiceStatus === 'paid' && $lojaId && sh_column_exists($pdo, 'lojas', 'paid_until')) {
-    $paidUntil = (new DateTimeImmutable('now'))->modify('+1 month')->format('Y-m-d H:i:s');
-    $stmtUpdateLoja = $pdo->prepare("UPDATE lojas SET paid_until = ? WHERE id = ?");
-    $stmtUpdateLoja->execute([$paidUntil, $lojaId]);
-}
-
-mp_log_payment(date('c') . ' | paymentId=' . $paymentId . ' | status=' . ($paymentStatus ?? 'null') . ' | invoiceId=' . $invoiceId);
+mp_log('payment_webhook_processed', [
+    'payment_id' => $paymentId,
+    'status' => $paymentStatus,
+    'invoice_id' => $invoiceId,
+    'request_id' => $paymentResponse['request_id'] ?? null,
+]);
 
 echo json_encode(['ok' => true], JSON_UNESCAPED_UNICODE);
 ?>
