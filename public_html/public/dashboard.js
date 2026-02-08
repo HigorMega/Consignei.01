@@ -59,7 +59,8 @@ const API = {
     relatorio_lote: '../api/relatorio_lote.php',
     baixar_devolucao: '../api/baixar_devolucao_lote.php',
     billing_status: '../api/billing_status.php',
-    billing_checkout: '../api/billing_create_checkout.php'
+    billing_checkout: '../api/billing_create_checkout.php',
+    subscription_config: '../api/subscription_config.php'
 };
 
 const App = {
@@ -156,6 +157,43 @@ function updateAssinaturaBadge(status) {
     if (!badge) return;
     badge.classList.remove('status-active', 'status-trial', 'status-pending', 'status-expired', 'status-cancelled', 'status-paused');
     badge.classList.add(`status-${status}`);
+}
+
+async function carregarConfiguracaoAssinatura() {
+    const planHint = document.getElementById('assinaturaPlanHint');
+    const modalPrice = document.getElementById('assinaturaModalPrice');
+    const modalTrial = document.getElementById('assinaturaModalTrial');
+
+    if (!planHint && !modalPrice && !modalTrial) {
+        return;
+    }
+
+    try {
+        const response = await fetch(API.subscription_config, { credentials: 'include' });
+        const config = await response.json();
+        const price = Number(config.price || 0).toFixed(2).replace('.', ',');
+        const trialDays = Number(config.trial_days || 0);
+
+        if (planHint) {
+            planHint.textContent = trialDays > 0
+                ? `Plano mensal R$ ${price} com ${trialDays} dias grátis.`
+                : `Plano mensal R$ ${price}.`;
+        }
+        if (modalPrice) {
+            modalPrice.textContent = `R$ ${price} / mês`;
+        }
+        if (modalTrial) {
+            if (trialDays > 0) {
+                modalTrial.textContent = `${trialDays} dias grátis`;
+                modalTrial.style.display = 'inline-block';
+            } else {
+                modalTrial.textContent = '';
+                modalTrial.style.display = 'none';
+            }
+        }
+    } catch (error) {
+        console.warn('Erro ao carregar configuração de assinatura:', error);
+    }
 }
 
 async function carregarStatusAssinaturaUI() {
@@ -388,7 +426,7 @@ async function initApp() {
         
         await Promise.all([
             carregarConfiguracoes(), carregarCategorias(), carregarFornecedores(), carregarProdutos(), carregarVendas(),
-            carregarStatusAssinaturaUI()
+            carregarStatusAssinaturaUI(), carregarConfiguracaoAssinatura()
         ]);
         renderizarGraficoVendas(); 
         gerarLinkVitrine();

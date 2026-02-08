@@ -2,6 +2,7 @@ const statusMessage = document.getElementById('statusMessage');
 const trialBadge = document.getElementById('trialBadge');
 const btnAssinar = document.getElementById('btnAssinar');
 const faturasContent = document.getElementById('faturasContent');
+const planDescription = document.getElementById('planDescription');
 
 const readJsonResponse = async (response) => {
     const text = await response.text();
@@ -156,7 +157,29 @@ const carregarStatus = async () => {
     }
 };
 
+const carregarConfiguracaoAssinatura = async () => {
+    if (!planDescription) return;
+    try {
+        const response = await fetch('../api/subscription_config.php', { credentials: 'include' });
+        if (!response.ok) {
+            throw new Error('Erro ao buscar configuração.');
+        }
+        const config = await readJsonResponse(response);
+        const price = Number(config.price || 0).toFixed(2).replace('.', ',');
+        const trialDays = Number(config.trial_days || 0);
+
+        if (trialDays > 0) {
+            planDescription.textContent = `Você tem ${trialDays} dias grátis. Depois R$ ${price}/mês. Cancele quando quiser.`;
+        } else {
+            planDescription.textContent = `Plano mensal R$ ${price}/mês. Cancele quando quiser.`;
+        }
+    } catch (error) {
+        planDescription.textContent = 'Plano mensal R$ 21,90/mês. Cancele quando quiser.';
+    }
+};
+
 document.addEventListener('DOMContentLoaded', () => {
+    carregarConfiguracaoAssinatura();
     carregarStatus();
     carregarFaturas();
 });
