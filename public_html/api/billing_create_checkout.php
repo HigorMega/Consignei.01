@@ -98,7 +98,9 @@ try {
     mp_log('billing_preapproval_start', [
         'loja_id' => $lojaId,
         'external_reference' => $externalReference,
+        'trial_days' => $trialDays,
         'start_date' => $startDate,
+        'end_date' => null,
     ]);
 
     $response = mp_request('POST', '/preapproval', $payload);
