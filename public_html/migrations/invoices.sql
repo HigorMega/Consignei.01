@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS invoices (
     assinatura_id VARCHAR(120) NOT NULL,
     gateway VARCHAR(60) NOT NULL DEFAULT 'mercadopago',
     mp_payment_id VARCHAR(120) NULL,
+    external_reference VARCHAR(120) NULL,
     status ENUM('paid','pending','failed') NOT NULL DEFAULT 'pending',
     amount DECIMAL(10,2) NOT NULL DEFAULT 21.90,
     currency VARCHAR(3) NOT NULL DEFAULT 'BRL',
@@ -14,5 +15,6 @@ CREATE TABLE IF NOT EXISTS invoices (
     INDEX idx_invoices_loja_id (loja_id),
     INDEX idx_invoices_assinatura_id (assinatura_id),
     INDEX idx_invoices_mp_payment_id (mp_payment_id),
+    INDEX idx_invoices_external_reference (external_reference),
     INDEX idx_invoices_status (status)
 );
