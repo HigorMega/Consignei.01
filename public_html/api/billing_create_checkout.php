@@ -43,7 +43,7 @@ try {
     $trialDays = TRIAL_DAYS;
     $nowUtc = new DateTimeImmutable('now', new DateTimeZone('UTC'));
     $trialStart = $trialDays > 0 ? $nowUtc->modify('+' . $trialDays . ' days') : $nowUtc;
-    $startDate = sh_format_mp_datetime($trialStart);
+    $startDate = mp_calc_start_date($trialDays);
     $assinaturaId = 'sub:' . uniqid();
     $hasExternalReference = sh_column_exists($pdo, 'invoices', 'external_reference');
 

@@ -17,6 +17,31 @@ function mp_log(string $message, array $context = []): void
     file_put_contents($logDir . '/mercadopago.log', $entry . PHP_EOL, FILE_APPEND | LOCK_EX);
 }
 
+function mp_calc_start_date(int $trialDays): string
+{
+    $trialDays = max(0, $trialDays);
+    $nowUtc = new DateTimeImmutable('now', new DateTimeZone('UTC'));
+
+    if ($trialDays > 0) {
+        $start = $nowUtc->modify("+{$trialDays} days");
+    } else {
+        $start = $nowUtc->modify('+2 minutes');
+    }
+
+    if ($start <= $nowUtc) {
+        $start = $nowUtc->modify('+2 minutes');
+    }
+
+    $startDate = $start->format('Y-m-d\TH:i:s\Z');
+    mp_log('mp_preapproval_start_date_calculated', [
+        'trial_days' => $trialDays,
+        'start_date' => $startDate,
+        'now_utc' => $nowUtc->format('Y-m-d\TH:i:s\Z'),
+    ]);
+
+    return $startDate;
+}
+
 function mp_get_mode(?string $token = null): string
 {
     $mode = strtolower((string) env('MP_MODE', ''));
