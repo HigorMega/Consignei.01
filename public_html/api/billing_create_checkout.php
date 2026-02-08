@@ -1,7 +1,6 @@
 <?php
 // api/billing_create_checkout.php
 session_start();
-header('Content-Type: application/json; charset=UTF-8');
 ini_set('display_errors', 0);
 
 require_once "../db/conexao.php";
@@ -9,6 +8,11 @@ require_once __DIR__ . "/subscription_helpers.php";
 require_once __DIR__ . "/../lib/mercadopago.php";
 
 try {
+    $redirectMode = isset($_GET['redirect']) && $_GET['redirect'] === '1';
+    if (!$redirectMode) {
+        header('Content-Type: application/json; charset=UTF-8');
+    }
+
     sh_require_login();
 
     $accessToken = mp_get_access_token();
@@ -23,6 +27,7 @@ try {
 
     if (!$loja) {
         http_response_code(404);
+        header('Content-Type: application/json; charset=UTF-8');
         echo json_encode(['success' => false, 'message' => 'Loja não encontrada.']);
         exit;
     }
@@ -72,6 +77,7 @@ try {
     $payerInfo = mp_resolve_payer_email($loja['email']);
     if (mp_is_sandbox() && $payerInfo['source'] !== 'test') {
         http_response_code(422);
+        header('Content-Type: application/json; charset=UTF-8');
         echo json_encode([
             'success' => false,
             'message' => 'Configure um e-mail de comprador de teste (MP_TEST_PAYER_EMAIL) diferente do vendedor para continuar.',
@@ -132,6 +138,7 @@ try {
             'request_id' => $response['request_id'] ?? null,
         ]);
         http_response_code($response['status'] ?: 502);
+        header('Content-Type: application/json; charset=UTF-8');
         echo json_encode(['success' => false, 'message' => $message], JSON_UNESCAPED_UNICODE);
         exit;
     }
@@ -171,6 +178,13 @@ try {
         $stmtUpdate->execute($values);
     }
 
+    if ($redirectMode && !empty($data['init_point'])) {
+        mp_log('billing_redirect_mode', ['loja_id' => $lojaId, 'redirect' => true]);
+        header('Location: ' . $data['init_point'], true, 302);
+        exit;
+    }
+
+    header('Content-Type: application/json; charset=UTF-8');
     echo json_encode([
         'success' => true,
         'checkout_url' => $data['init_point'] ?? null,
@@ -179,6 +193,7 @@ try {
 } catch (Exception $e) {
     mp_log('billing_preapproval_error', ['error' => $e->getMessage()]);
     http_response_code(500);
+    header('Content-Type: application/json; charset=UTF-8');
     echo json_encode(['success' => false, 'message' => $e->getMessage()], JSON_UNESCAPED_UNICODE);
 }
 ?>
