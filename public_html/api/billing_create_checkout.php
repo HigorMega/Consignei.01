@@ -52,10 +52,34 @@ try {
     $startDate = sh_format_mp_datetime(
         (new DateTimeImmutable('now'))->modify('+5 days')
     );
+    $assinaturaId = 'sub:' . uniqid();
+    $hasExternalReference = sh_column_exists($pdo, 'invoices', 'external_reference');
+
+    $columns = ['loja_id', 'assinatura_id', 'gateway', 'status', 'amount', 'currency'];
+    $placeholders = ['?', '?', '?', '?', '?', '?'];
+    $values = [$lojaId, $assinaturaId, 'mercadopago', 'pending', $price, 'BRL'];
+    if ($hasExternalReference) {
+        $columns[] = 'external_reference';
+        $placeholders[] = '?';
+        $values[] = null;
+    }
+
+    $stmtInvoice = $pdo->prepare(
+        "INSERT INTO invoices (" . implode(', ', $columns) . ") VALUES (" . implode(', ', $placeholders) . ")"
+    );
+    $stmtInvoice->execute($values);
+
+    $invoiceId = (int) $pdo->lastInsertId();
+    $externalReference = 'subinv:' . $invoiceId;
+
+    if ($hasExternalReference) {
+        $stmtUpdateInvoice = $pdo->prepare("UPDATE invoices SET external_reference = ? WHERE id = ?");
+        $stmtUpdateInvoice->execute([$externalReference, $invoiceId]);
+    }
 
     $payload = [
         'reason' => $reason,
-        'external_reference' => (string) $lojaId,
+        'external_reference' => $externalReference,
         'payer_email' => $loja['email'],
         'auto_recurring' => [
             'frequency' => 1,

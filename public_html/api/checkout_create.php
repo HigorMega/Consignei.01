@@ -38,7 +38,30 @@ try {
 
     $price = (float) env('SUBSCRIPTION_PRICE', '21.90');
     $appUrl = rtrim((string) env('APP_URL', ''), '/');
-    $externalReference = sprintf('loja:%d:ts:%d', $lojaId, time());
+    $assinaturaId = 'pref:' . uniqid();
+    $hasExternalReference = sh_column_exists($pdo, 'invoices', 'external_reference');
+
+    $columns = ['loja_id', 'assinatura_id', 'gateway', 'status', 'amount', 'currency'];
+    $placeholders = ['?', '?', '?', '?', '?', '?'];
+    $values = [$lojaId, $assinaturaId, 'mercadopago', 'pending', $price, 'BRL'];
+    if ($hasExternalReference) {
+        $columns[] = 'external_reference';
+        $placeholders[] = '?';
+        $values[] = null;
+    }
+
+    $stmtInvoice = $pdo->prepare(
+        "INSERT INTO invoices (" . implode(', ', $columns) . ") VALUES (" . implode(', ', $placeholders) . ")"
+    );
+    $stmtInvoice->execute($values);
+
+    $invoiceId = (int) $pdo->lastInsertId();
+    $externalReference = 'inv:' . $invoiceId;
+
+    if ($hasExternalReference) {
+        $stmtUpdateInvoice = $pdo->prepare("UPDATE invoices SET external_reference = ? WHERE id = ?");
+        $stmtUpdateInvoice->execute([$externalReference, $invoiceId]);
+    }
 
     $payload = [
         'external_reference' => $externalReference,

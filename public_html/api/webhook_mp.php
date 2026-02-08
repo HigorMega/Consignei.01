@@ -75,14 +75,38 @@ $status = $preapproval['status'] ?? 'unknown';
 $externalReference = $preapproval['external_reference'] ?? null;
 
 $lojaId = null;
-if ($externalReference && ctype_digit((string) $externalReference)) {
-    $lojaId = (int) $externalReference;
-} elseif (sh_column_exists($pdo, 'lojas', 'assinatura_id')) {
-    $stmt = $pdo->prepare("SELECT id FROM lojas WHERE assinatura_id = ? LIMIT 1");
-    $stmt->execute([$preapprovalId]);
-    $row = $stmt->fetch(PDO::FETCH_ASSOC);
-    if ($row) {
-        $lojaId = (int) $row['id'];
+$invoiceId = null;
+$invoice = null;
+$hasExternalReference = sh_column_exists($pdo, 'invoices', 'external_reference');
+
+if ($externalReference) {
+    if (preg_match('/^(inv|subinv):(\d+)$/', (string) $externalReference, $matches)) {
+        $invoiceId = (int) $matches[2];
+        $stmt = $pdo->prepare("SELECT id, loja_id FROM invoices WHERE id = ? LIMIT 1");
+        $stmt->execute([$invoiceId]);
+        $invoice = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+    } elseif ($hasExternalReference) {
+        $stmt = $pdo->prepare("SELECT id, loja_id FROM invoices WHERE external_reference = ? LIMIT 1");
+        $stmt->execute([(string) $externalReference]);
+        $invoice = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+    }
+}
+
+if ($invoice) {
+    $invoiceId = (int) $invoice['id'];
+    $lojaId = (int) $invoice['loja_id'];
+}
+
+if (!$lojaId) {
+    if ($externalReference && ctype_digit((string) $externalReference)) {
+        $lojaId = (int) $externalReference;
+    } elseif (sh_column_exists($pdo, 'lojas', 'assinatura_id')) {
+        $stmt = $pdo->prepare("SELECT id FROM lojas WHERE assinatura_id = ? LIMIT 1");
+        $stmt->execute([$preapprovalId]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($row) {
+            $lojaId = (int) $row['id'];
+        }
     }
 }
 
@@ -185,9 +209,13 @@ $invoiceData = [
     'period_start' => $periodStart ? $periodStart->format('Y-m-d H:i:s') : null,
     'period_end' => $periodEnd ? $periodEnd->format('Y-m-d H:i:s') : null,
     'paid_at' => $paidAt ? $paidAt->format('Y-m-d H:i:s') : null,
+    'external_reference' => $externalReference,
 ];
 
-if ($mpPaymentId) {
+$existing = null;
+if ($invoiceId) {
+    $existing = ['id' => $invoiceId];
+} elseif ($mpPaymentId) {
     $stmtInvoice = $pdo->prepare("SELECT id FROM invoices WHERE mp_payment_id = ? LIMIT 1");
     $stmtInvoice->execute([$mpPaymentId]);
     $existing = $stmtInvoice->fetch(PDO::FETCH_ASSOC);
@@ -201,24 +229,40 @@ if ($mpPaymentId) {
 }
 
 if ($existing) {
-    $stmtUpdateInvoice = $pdo->prepare(
-        "UPDATE invoices SET status = ?, amount = ?, currency = ?, period_start = ?, period_end = ?, paid_at = ? WHERE id = ?"
-    );
-    $stmtUpdateInvoice->execute([
+    $updateColumns = [
+        'status = ?',
+        'amount = ?',
+        'currency = ?',
+        'period_start = ?',
+        'period_end = ?',
+        'paid_at = ?',
+    ];
+    $updateValues = [
         $invoiceData['status'],
         $invoiceData['amount'],
         $invoiceData['currency'],
         $invoiceData['period_start'],
         $invoiceData['period_end'],
         $invoiceData['paid_at'],
-        $existing['id'],
-    ]);
-} else {
-    $stmtInsertInvoice = $pdo->prepare(
-        "INSERT INTO invoices (loja_id, assinatura_id, gateway, mp_payment_id, status, amount, currency, period_start, period_end, paid_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    ];
+    if ($mpPaymentId) {
+        $updateColumns[] = 'mp_payment_id = ?';
+        $updateValues[] = $mpPaymentId;
+    }
+    if ($hasExternalReference && $externalReference) {
+        $updateColumns[] = 'external_reference = ?';
+        $updateValues[] = $externalReference;
+    }
+    $updateValues[] = $existing['id'];
+
+    $stmtUpdateInvoice = $pdo->prepare(
+        "UPDATE invoices SET " . implode(', ', $updateColumns) . " WHERE id = ?"
     );
-    $stmtInsertInvoice->execute([
+    $stmtUpdateInvoice->execute($updateValues);
+} else {
+    $columns = ['loja_id', 'assinatura_id', 'gateway', 'mp_payment_id', 'status', 'amount', 'currency', 'period_start', 'period_end', 'paid_at'];
+    $placeholders = array_fill(0, count($columns), '?');
+    $values = [
         $invoiceData['loja_id'],
         $invoiceData['assinatura_id'],
         $invoiceData['gateway'],
@@ -229,7 +273,16 @@ if ($existing) {
         $invoiceData['period_start'],
         $invoiceData['period_end'],
         $invoiceData['paid_at'],
-    ]);
+    ];
+    if ($hasExternalReference && $externalReference) {
+        $columns[] = 'external_reference';
+        $placeholders[] = '?';
+        $values[] = $externalReference;
+    }
+    $stmtInsertInvoice = $pdo->prepare(
+        "INSERT INTO invoices (" . implode(', ', $columns) . ") VALUES (" . implode(', ', $placeholders) . ")"
+    );
+    $stmtInsertInvoice->execute($values);
 }
 
 mp_log(date('c') . " | payload=" . $payloadRaw . " | subId={$preapprovalId} | status={$status} | lojaId={$lojaId}");
