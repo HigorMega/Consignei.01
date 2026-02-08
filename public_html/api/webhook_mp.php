@@ -10,6 +10,7 @@ require_once __DIR__ . "/../lib/mercadopago.php";
 $payloadRaw = $GLOBALS['mp_webhook_raw_body'] ?? (file_get_contents('php://input') ?: '');
 $payload = $GLOBALS['mp_webhook_payload'] ?? (json_decode($payloadRaw, true) ?: []);
 $headers = $GLOBALS['mp_webhook_headers'] ?? mp_get_request_headers();
+$GLOBALS['mp_webhook_raw_body'] = $payloadRaw;
 $type = (string) ($payload['type'] ?? '');
 $action = (string) ($payload['action'] ?? '');
 
@@ -40,7 +41,7 @@ if (empty($GLOBALS['mp_webhook_logged'])) {
 }
 
 if (empty($GLOBALS['mp_webhook_signature_validated'])) {
-    if (!mp_validate_webhook_signature($payloadRaw, $headers)) {
+    if (!mp_validate_webhook_signature($headers, $payload, getenv('MP_WEBHOOK_SECRET'))) {
         mp_log('webhook_signature_invalid');
         http_response_code(401);
         echo json_encode(['success' => false]);

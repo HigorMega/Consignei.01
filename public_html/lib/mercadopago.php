@@ -123,9 +123,9 @@ function mp_get_request_headers(): array
     return $headers;
 }
 
-function mp_validate_webhook_signature(string $rawBody, array $headers): bool
+function mp_validate_webhook_signature(array $headers, array $payload, ?string $secret = null): bool
 {
-    $secret = env('MP_WEBHOOK_SECRET');
+    $secret = $secret ?? env('MP_WEBHOOK_SECRET');
     if (!$secret) {
         return true;
     }
@@ -152,8 +152,14 @@ function mp_validate_webhook_signature(string $rawBody, array $headers): bool
         return false;
     }
 
-    $payload = $timestamp . '.' . $rawBody;
-    $computed = hash_hmac('sha256', $payload, $secret);
+    $rawBody = $GLOBALS['mp_webhook_raw_body'] ?? null;
+    if ($rawBody === null) {
+        $encoded = json_encode($payload, JSON_UNESCAPED_UNICODE);
+        $rawBody = $encoded === false ? '' : $encoded;
+    }
+
+    $payloadToSign = $timestamp . '.' . $rawBody;
+    $computed = hash_hmac('sha256', $payloadToSign, $secret);
 
     return hash_equals($computed, $signature);
 }
