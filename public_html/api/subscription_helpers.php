@@ -39,6 +39,23 @@ function sh_format_mp_datetime(DateTimeImmutable $value): string
     return $value->format('Y-m-d\TH:i:s.vP');
 }
 
+function sh_format_datetime_br(?string $utcMysql): ?string
+{
+    if (!$utcMysql) {
+        return null;
+    }
+
+    try {
+        $utcDate = new DateTimeImmutable($utcMysql, new DateTimeZone('UTC'));
+    } catch (Exception $e) {
+        return null;
+    }
+
+    return $utcDate
+        ->setTimezone(new DateTimeZone('America/Sao_Paulo'))
+        ->format('d/m/Y H:i:s');
+}
+
 function sh_get_subscription_snapshot(PDO $pdo, int $lojaId): array
 {
     $hasTrial = sh_column_exists($pdo, 'lojas', 'trial_until');
