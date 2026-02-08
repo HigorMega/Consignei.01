@@ -1,12 +1,19 @@
 const statusMessage = document.getElementById('statusMessage');
 const trialBadge = document.getElementById('trialBadge');
 const btnAssinar = document.getElementById('btnAssinar');
+const btnAltPayment = document.getElementById('btnAltPayment');
+const paymentAlert = document.getElementById('paymentAlert');
+const paymentAlertText = document.getElementById('paymentAlertText');
+const btnAlertPayment = document.getElementById('btnAlertPayment');
 const faturasContent = document.getElementById('faturasContent');
 const planDescription = document.getElementById('planDescription');
 const redirectEndpoint = '/api/billing_create_checkout.php?redirect=1';
+const altRedirectEndpoint = '/api/checkout_create.php?redirect=1';
 const REDIRECT_FALLBACK_DELAY = 2000;
 let redirectNotice = null;
 let redirectTimeout = null;
+let altPaymentsEnabled = false;
+let altPaymentsDefault = 'all';
 
 const ensureRedirectNotice = () => {
     if (redirectNotice) return redirectNotice;
@@ -101,6 +108,54 @@ const carregarFaturas = async () => {
     }
 };
 
+const openAltPayment = async (method) => {
+    const normalizedMethod = method || 'all';
+    const redirectUrl = `${altRedirectEndpoint}&method=${encodeURIComponent(normalizedMethod)}`;
+    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+    if (isMobile) {
+        window.location.href = redirectUrl;
+        return;
+    }
+
+    const win = window.open('about:blank', '_blank', 'noopener,noreferrer');
+    if (!win) {
+        window.location.href = redirectUrl;
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/checkout_create.php?method=${encodeURIComponent(normalizedMethod)}`, {
+            credentials: 'include',
+        });
+        if (!response.ok) {
+            throw new Error('Falha ao iniciar pagamento.');
+        }
+        const data = await readJsonResponse(response);
+        const initPoint = data.init_point || data.checkout_url;
+        if (!data.success || !initPoint) {
+            throw new Error('Link de pagamento inválido.');
+        }
+        win.location = initPoint;
+    } catch (error) {
+        win.close();
+        window.location.href = redirectUrl;
+    }
+};
+
+const atualizarAlertaPagamento = (status) => {
+    if (!paymentAlert) return;
+    if (status && status.payment_suggestion === 'pix' && altPaymentsEnabled) {
+        paymentAlert.classList.remove('is-hidden');
+        if (paymentAlertText) {
+            paymentAlertText.textContent = status.payment_suggestion_text
+                || 'Pagamento recusado. Recomendamos pagar via PIX/Boleto.';
+        }
+    } else {
+        paymentAlert.classList.add('is-hidden');
+    }
+};
+
 const atualizarStatus = (status) => {
     if (!statusMessage) return;
 
@@ -114,7 +169,7 @@ const atualizarStatus = (status) => {
     }
 
     statusMessage.textContent = 'Assinatura inativa. Ative para continuar usando o painel.';
-    btnAssinar.textContent = 'Ativar assinatura';
+    btnAssinar.textContent = 'Ativar assinatura (cartão)';
     btnAssinar.onclick = async () => {
         btnAssinar.disabled = true;
         btnAssinar.textContent = 'Redirecionando...';
@@ -175,6 +230,7 @@ const carregarStatus = async () => {
         }
         const status = await readJsonResponse(response);
         atualizarStatus(status);
+        atualizarAlertaPagamento(status);
 
         if (status.trial_until) {
             const trialDate = new Date(status.trial_until.replace(' ', 'T'));
@@ -202,19 +258,38 @@ const carregarConfiguracaoAssinatura = async () => {
         const config = await readJsonResponse(response);
         const price = Number(config.price || 0).toFixed(2).replace('.', ',');
         const trialDays = Number(config.trial_days || 0);
+        altPaymentsEnabled = Boolean(config.enable_alt_payments);
+        altPaymentsDefault = config.alt_payments_default || 'all';
 
         if (trialDays > 0) {
             planDescription.textContent = `Você tem ${trialDays} dias grátis. Depois R$ ${price}/mês. Cancele quando quiser.`;
         } else {
             planDescription.textContent = `Plano mensal R$ ${price}/mês. Cancele quando quiser.`;
         }
+
+        if (btnAltPayment) {
+            if (altPaymentsEnabled) {
+                btnAltPayment.classList.remove('is-hidden');
+            } else {
+                btnAltPayment.classList.add('is-hidden');
+            }
+        }
     } catch (error) {
         planDescription.textContent = 'Plano mensal R$ 21,90/mês. Cancele quando quiser.';
+        if (btnAltPayment) {
+            btnAltPayment.classList.add('is-hidden');
+        }
     }
 };
 
-document.addEventListener('DOMContentLoaded', () => {
-    carregarConfiguracaoAssinatura();
-    carregarStatus();
+document.addEventListener('DOMContentLoaded', async () => {
+    await carregarConfiguracaoAssinatura();
+    await carregarStatus();
     carregarFaturas();
+    if (btnAltPayment) {
+        btnAltPayment.addEventListener('click', () => openAltPayment(altPaymentsDefault));
+    }
+    if (btnAlertPayment) {
+        btnAlertPayment.addEventListener('click', () => openAltPayment(altPaymentsDefault));
+    }
 });
