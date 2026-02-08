@@ -115,7 +115,7 @@ const atualizarStatus = (status) => {
 
     statusMessage.textContent = 'Assinatura inativa. Ative para continuar usando o painel.';
     btnAssinar.textContent = 'Ativar assinatura';
-    btnAssinar.onclick = () => {
+    btnAssinar.onclick = async () => {
         btnAssinar.disabled = true;
         btnAssinar.textContent = 'Redirecionando...';
         const notice = ensureRedirectNotice();
@@ -123,10 +123,43 @@ const atualizarStatus = (status) => {
         if (redirectTimeout) {
             clearTimeout(redirectTimeout);
         }
+        const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+        if (isMobile) {
+            window.location.href = redirectEndpoint;
+            return;
+        }
+
+        const win = window.open('about:blank', '_blank', 'noopener,noreferrer');
+        if (!win) {
+            window.location.href = redirectEndpoint;
+            return;
+        }
+
         redirectTimeout = setTimeout(() => {
             notice.classList.remove('is-hidden');
         }, REDIRECT_FALLBACK_DELAY);
-        window.location.href = redirectEndpoint;
+
+        try {
+            const response = await fetch('/api/billing_create_checkout.php', {
+                method: 'POST',
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            });
+            if (!response.ok) {
+                throw new Error('Falha ao iniciar pagamento.');
+            }
+            const data = await readJsonResponse(response);
+            const initPoint = data.init_point || data.checkout_url;
+            if (!data.success || !initPoint) {
+                throw new Error('Link de pagamento inválido.');
+            }
+            win.location = initPoint;
+        } catch (error) {
+            win.close();
+            window.location.href = redirectEndpoint;
+        }
     };
 };
 
