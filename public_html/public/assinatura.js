@@ -18,6 +18,9 @@ const readJsonResponse = async (response) => {
 
 const formatDate = (value) => {
     if (!value) return '--';
+    if (value.includes('/')) {
+        return value.split(' ')[0];
+    }
     const date = new Date(value.replace(' ', 'T'));
     if (Number.isNaN(date.getTime())) return '--';
     return date.toLocaleDateString('pt-BR');
@@ -25,6 +28,9 @@ const formatDate = (value) => {
 
 const formatDateTime = (value) => {
     if (!value) return '--';
+    if (value.includes('/')) {
+        return value;
+    }
     const date = new Date(value.replace(' ', 'T'));
     if (Number.isNaN(date.getTime())) return '--';
     return date.toLocaleString('pt-BR');

@@ -19,7 +19,7 @@ function mp_log(string $message, array $context = []): void
 
 function mp_iso_utc(DateTimeImmutable $dt): string
 {
-    return $dt->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d\TH:i:s\Z');
+    return $dt->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d\TH:i:s.v\Z');
 }
 
 function mp_calc_start_date(int $trialDays): string
