@@ -1083,6 +1083,8 @@ async function carregarConfiguracoes() {
         if(document.getElementById('cfgWhats') && dados.whatsapp) document.getElementById('cfgWhats').value = dados.whatsapp;
         if(document.getElementById('cfgVendedor')) document.getElementById('cfgVendedor').value = dados.nome_vendedor || dados.vendedor || '';
         if(document.getElementById('cfgInstagram') && dados.instagram) document.getElementById('cfgInstagram').value = dados.instagram;
+        if(document.getElementById('cfgPayerFirstName')) document.getElementById('cfgPayerFirstName').value = dados.payer_first_name || '';
+        if(document.getElementById('cfgPayerLastName')) document.getElementById('cfgPayerLastName').value = dados.payer_last_name || '';
         if(document.getElementById('cfgEstiloFonte')) document.getElementById('cfgEstiloFonte').value = dados.estilo_fonte || 'classico';
         if(document.getElementById('cfgCorFundo')) document.getElementById('cfgCorFundo').value = dados.cor_fundo || '#ffffff';
         if(document.getElementById('cfgTexturaFundo')) document.getElementById('cfgTexturaFundo').value = dados.textura_fundo || 'liso';
@@ -1114,6 +1116,8 @@ async function salvarConfiguracoes(e) {
     const whatsapp = document.getElementById('cfgWhats')?.value || '';
     const vendedor = document.getElementById('cfgVendedor')?.value || '';
     const instagram = document.getElementById('cfgInstagram')?.value || '';
+    const payerFirstName = document.getElementById('cfgPayerFirstName')?.value || '';
+    const payerLastName = document.getElementById('cfgPayerLastName')?.value || '';
     const estiloFonte = document.getElementById('cfgEstiloFonte')?.value || 'classico';
     const corFundo = document.getElementById('cfgCorFundo')?.value || '#ffffff';
     const texturaFundo = document.getElementById('cfgTexturaFundo')?.value || 'liso';
@@ -1141,7 +1145,9 @@ async function salvarConfiguracoes(e) {
         estilo_fonte: estiloFonte,
         cor_fundo: corFundo,
         textura_fundo: texturaFundo,
-        banner_aviso: bannerAviso
+        banner_aviso: bannerAviso,
+        payer_first_name: payerFirstName,
+        payer_last_name: payerLastName
     };
 
     // Envia slug somente se existir campo na tela (configurações.html ou aba Config) e se mudou

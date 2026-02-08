@@ -145,15 +145,22 @@ const openAltPayment = async (method) => {
 
 const atualizarAlertaPagamento = (status) => {
     if (!paymentAlert) return;
-    if (status && status.payment_suggestion === 'pix' && altPaymentsEnabled) {
+    if (!status || !altPaymentsEnabled) {
+        paymentAlert.classList.add('is-hidden');
+        return;
+    }
+
+    if (status.last_payment_status === 'failed' && status.payment_suggestion === 'alt_payments') {
         paymentAlert.classList.remove('is-hidden');
         if (paymentAlertText) {
             paymentAlertText.textContent = status.payment_suggestion_text
-                || 'Pagamento recusado. Recomendamos pagar via PIX/Boleto.';
+                || status.message
+                || 'Pagamento recusado. Recomendamos PIX/Boleto.';
         }
-    } else {
-        paymentAlert.classList.add('is-hidden');
+        return;
     }
+
+    paymentAlert.classList.add('is-hidden');
 };
 
 const atualizarStatus = (status) => {
@@ -169,7 +176,7 @@ const atualizarStatus = (status) => {
     }
 
     statusMessage.textContent = 'Assinatura inativa. Ative para continuar usando o painel.';
-    btnAssinar.textContent = 'Ativar assinatura (cartão)';
+    btnAssinar.textContent = 'Ativar assinatura (Cartão – recorrente)';
     btnAssinar.onclick = async () => {
         btnAssinar.disabled = true;
         btnAssinar.textContent = 'Redirecionando...';

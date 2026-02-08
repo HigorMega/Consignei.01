@@ -68,7 +68,14 @@ try {
     if (!in_array($method, ['all', 'pix', 'boleto'], true)) {
         $method = 'all';
     }
-    $stmt = $pdo->prepare("SELECT email FROM lojas WHERE id = ? LIMIT 1");
+    $lojaFields = ['email', 'nome_loja'];
+    if (sh_column_exists($pdo, 'lojas', 'payer_first_name')) {
+        $lojaFields[] = 'payer_first_name';
+    }
+    if (sh_column_exists($pdo, 'lojas', 'payer_last_name')) {
+        $lojaFields[] = 'payer_last_name';
+    }
+    $stmt = $pdo->prepare("SELECT " . implode(', ', $lojaFields) . " FROM lojas WHERE id = ? LIMIT 1");
     $stmt->execute([$lojaId]);
     $loja = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -113,6 +120,26 @@ try {
     }
 
     $payerInfo = mp_resolve_payer_email($loja['email'] ?? null);
+    $payerFirstName = trim((string) ($loja['payer_first_name'] ?? ''));
+    $payerLastName = trim((string) ($loja['payer_last_name'] ?? ''));
+    $nomeLoja = trim((string) ($loja['nome_loja'] ?? ''));
+
+    if (($payerFirstName === '' || $payerLastName === '') && $nomeLoja !== '') {
+        $parts = preg_split('/\s+/', $nomeLoja, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        if (!empty($parts)) {
+            $fallbackFirst = array_shift($parts) ?: '';
+            $fallbackLast = trim(implode(' ', $parts));
+            if ($fallbackLast === '') {
+                $fallbackLast = '-';
+            }
+            if ($payerFirstName === '') {
+                $payerFirstName = $fallbackFirst;
+            }
+            if ($payerLastName === '') {
+                $payerLastName = $fallbackLast;
+            }
+        }
+    }
     if (mp_is_sandbox() && $payerInfo['source'] !== 'test') {
         http_response_code(422);
         echo json_encode([
@@ -122,23 +149,38 @@ try {
         exit;
     }
 
+    $payerPayload = [
+        'email' => $payerInfo['email'],
+    ];
+    if ($payerFirstName !== '') {
+        $payerPayload['first_name'] = $payerFirstName;
+    }
+    if ($payerLastName !== '') {
+        $payerPayload['last_name'] = $payerLastName;
+    }
+
     $payload = [
         'external_reference' => $externalReference,
         'notification_url' => $appUrl . '/api/pagamentos_webhook.php',
-        'payer' => [
-            'email' => $payerInfo['email'],
-        ],
+        'payer' => $payerPayload,
         'items' => [
             [
-                'id' => 'assinatura_mensal',
-                'title' => 'Assinatura Consignei - Plano Mensal',
-                'description' => 'Acesso ao sistema Consignei por 30 dias',
+                'id' => 'CONS_MENSAL_30D',
+                'title' => 'Consignei App - Mensalidade',
+                'description' => 'Acesso ao Consignei App por 30 dias (pagamento avulso)',
                 'category_id' => 'services',
                 'quantity' => 1,
                 'unit_price' => $price,
             ],
         ],
     ];
+
+    mp_log('mp_payment_enrichment', [
+        'has_first' => $payerFirstName !== '',
+        'has_last' => $payerLastName !== '',
+        'item_id' => 'CONS_MENSAL_30D',
+        'category_id' => 'services',
+    ]);
 
     if ($method === 'pix') {
         $payload['payment_methods'] = [
