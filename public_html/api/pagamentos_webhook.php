@@ -15,12 +15,26 @@ require_once __DIR__ . "/../lib/mercadopago.php";
 
 $rawBody = $GLOBALS['mp_webhook_raw_body'] ?? (file_get_contents('php://input') ?: '');
 $payload = $GLOBALS['mp_webhook_payload'] ?? (json_decode($rawBody, true) ?: []);
-$headers = mp_get_request_headers();
+$headers = $GLOBALS['mp_webhook_headers'] ?? (function_exists('getallheaders') ? getallheaders() : []);
+$GLOBALS['mp_webhook_raw_body'] = $rawBody;
+$h = [];
+foreach ($headers as $k => $v) {
+    $h[strtolower($k)] = $v;
+}
 $type = (string) ($payload['type'] ?? '');
 $action = (string) ($payload['action'] ?? '');
-$normalizedHeaders = mp_normalize_headers($headers);
-$hasSignature = !empty($normalizedHeaders['x-signature']);
-$isLiveMode = (bool) ($payload['live_mode'] ?? false);
+$liveMode = (bool) ($payload['live_mode'] ?? false);
+$hasSignature = !empty($h['x-signature']);
+$hasSecret = (bool) getenv('MP_WEBHOOK_SECRET');
+
+mp_log('webhook_headers_debug', [
+    'live_mode' => $liveMode,
+    'has_signature' => $hasSignature,
+    'has_secret' => $hasSecret,
+    'type' => $type ?: null,
+    'action' => $action ?: null,
+    'header_keys' => array_keys($h),
+]);
 
 mp_log('webhook_received', [
     'event_id' => $payload['id'] ?? null,
@@ -52,7 +66,7 @@ if ($isPayment) {
     ]);
 }
 
-if (!$hasSignature && !$isLiveMode) {
+if (!$liveMode && !$hasSignature) {
     mp_log('webhook_test_no_signature', [
         'type' => $type ?: null,
         'action' => $action ?: null,
@@ -63,10 +77,16 @@ if (!$hasSignature && !$isLiveMode) {
     exit;
 }
 
-if (!mp_validate_webhook_signature($rawBody, $headers)) {
-    mp_log('webhook_signature_invalid');
+if ($liveMode && !$hasSignature) {
     http_response_code(401);
-    echo json_encode(['ok' => false], JSON_UNESCAPED_UNICODE);
+    echo json_encode(['ok' => false, 'error' => 'missing_signature'], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+if ($hasSignature && !mp_validate_webhook_signature($h, $payload, getenv('MP_WEBHOOK_SECRET'))) {
+    mp_log('webhook_signature_invalid', ['live_mode' => $liveMode]);
+    http_response_code(401);
+    echo json_encode(['ok' => false, 'error' => 'invalid_signature'], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
