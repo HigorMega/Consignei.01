@@ -7,27 +7,47 @@ require_once "../db/conexao.php";
 require_once __DIR__ . "/subscription_helpers.php";
 require_once __DIR__ . "/../lib/mercadopago.php";
 
-$payloadRaw = file_get_contents('php://input') ?: '';
-$payload = json_decode($payloadRaw, true) ?: [];
-$headers = mp_get_request_headers();
+$payloadRaw = $GLOBALS['mp_webhook_raw_body'] ?? (file_get_contents('php://input') ?: '');
+$payload = $GLOBALS['mp_webhook_payload'] ?? (json_decode($payloadRaw, true) ?: []);
+$headers = $GLOBALS['mp_webhook_headers'] ?? mp_get_request_headers();
+$type = (string) ($payload['type'] ?? '');
+$action = (string) ($payload['action'] ?? '');
 
-if (($payload['type'] ?? '') === 'payment' || str_starts_with((string) ($payload['action'] ?? ''), 'payment.')) {
+if (empty($GLOBALS['mp_webhook_logged'])) {
+    mp_log('webhook_received', [
+        'event_id' => $payload['id'] ?? null,
+        'resource_id' => $payload['data']['id'] ?? null,
+        'type' => $type ?: null,
+        'action' => $action ?: null,
+    ]);
+}
+
+if ($type === 'payment' || ($action !== '' && str_starts_with($action, 'payment.'))) {
     $GLOBALS['mp_webhook_raw_body'] = $payloadRaw;
     $GLOBALS['mp_webhook_payload'] = $payload;
+    $GLOBALS['mp_webhook_headers'] = $headers;
     require __DIR__ . '/pagamentos_webhook.php';
     exit;
 }
-mp_log('preapproval_webhook_received', [
-    'event_id' => $payload['id'] ?? null,
-    'resource_id' => $payload['data']['id'] ?? null,
-    'type' => $payload['type'] ?? null,
-    'action' => $payload['action'] ?? null,
-]);
 
-if (!mp_validate_webhook_signature($payloadRaw, $headers)) {
-    mp_log('preapproval_webhook_invalid_signature');
-    echo json_encode(['success' => true]);
-    exit;
+if (empty($GLOBALS['mp_webhook_logged'])) {
+    mp_log('subscription_webhook_received', [
+        'event_id' => $payload['id'] ?? null,
+        'resource_id' => $payload['data']['id'] ?? null,
+        'type' => $type ?: null,
+        'action' => $action ?: null,
+    ]);
+}
+
+if (empty($GLOBALS['mp_webhook_signature_validated'])) {
+    if (!mp_validate_webhook_signature($payloadRaw, $headers)) {
+        mp_log('webhook_signature_invalid');
+        http_response_code(401);
+        echo json_encode(['success' => false]);
+        exit;
+    }
+    mp_log('webhook_signature_ok');
+    $GLOBALS['mp_webhook_signature_validated'] = true;
 }
 
 $accessToken = mp_get_access_token();
@@ -45,7 +65,7 @@ if (!$preapprovalId) {
 }
 
 $eventType = (string) ($payload['type'] ?? 'preapproval');
-$action = isset($payload['action']) ? (string) $payload['action'] : null;
+$action = $action !== '' ? $action : null;
 $stored = mp_store_webhook_event($pdo, $payload, $headers, (string) $preapprovalId, $eventType, $action);
 if ($stored['duplicate']) {
     mp_log('preapproval_webhook_duplicate', ['event_id' => $stored['event_id']]);
@@ -69,6 +89,11 @@ $status = $preapproval['status'] ?? 'unknown';
 $externalReference = $preapproval['external_reference'] ?? null;
 $startDateRaw = $preapproval['auto_recurring']['start_date'] ?? null;
 $nextPaymentDateRaw = $preapproval['next_payment_date'] ?? null;
+
+mp_log('subscription_preapproval_fetched', [
+    'preapproval_id' => $preapprovalId,
+    'status' => $status,
+]);
 
 $lojaId = null;
 $invoiceId = null;

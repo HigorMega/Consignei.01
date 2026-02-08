@@ -16,16 +16,64 @@ require_once __DIR__ . "/../lib/mercadopago.php";
 $rawBody = $GLOBALS['mp_webhook_raw_body'] ?? (file_get_contents('php://input') ?: '');
 $payload = $GLOBALS['mp_webhook_payload'] ?? (json_decode($rawBody, true) ?: []);
 $headers = mp_get_request_headers();
+$type = (string) ($payload['type'] ?? '');
+$action = (string) ($payload['action'] ?? '');
 
-mp_log('payment_webhook_received', [
+mp_log('webhook_received', [
     'event_id' => $payload['id'] ?? null,
     'resource_id' => $payload['data']['id'] ?? ($payload['data_id'] ?? null),
-    'type' => $payload['type'] ?? null,
-    'action' => $payload['action'] ?? null,
+    'type' => $type ?: null,
+    'action' => $action ?: null,
 ]);
 
+$isPayment = $type === 'payment' || ($action !== '' && str_starts_with($action, 'payment.'));
+$isSubscription = $type === 'subscription'
+    || $type === 'preapproval'
+    || ($action !== '' && (str_contains($action, 'preapproval')
+        || str_contains($action, 'subscription')
+        || str_contains($action, 'plan')));
+
+if ($isPayment) {
+    mp_log('payment_webhook_received', [
+        'event_id' => $payload['id'] ?? null,
+        'resource_id' => $payload['data']['id'] ?? ($payload['data_id'] ?? null),
+        'type' => $type ?: null,
+        'action' => $action ?: null,
+    ]);
+} elseif ($isSubscription) {
+    mp_log('subscription_webhook_received', [
+        'event_id' => $payload['id'] ?? null,
+        'resource_id' => $payload['data']['id'] ?? ($payload['data_id'] ?? null),
+        'type' => $type ?: null,
+        'action' => $action ?: null,
+    ]);
+}
+
 if (!mp_validate_webhook_signature($rawBody, $headers)) {
-    mp_log('payment_webhook_invalid_signature');
+    mp_log('webhook_signature_invalid');
+    http_response_code(401);
+    echo json_encode(['ok' => false], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+mp_log('webhook_signature_ok');
+
+$GLOBALS['mp_webhook_signature_validated'] = true;
+$GLOBALS['mp_webhook_logged'] = true;
+
+if ($isSubscription) {
+    $GLOBALS['mp_webhook_raw_body'] = $rawBody;
+    $GLOBALS['mp_webhook_payload'] = $payload;
+    $GLOBALS['mp_webhook_headers'] = $headers;
+    require __DIR__ . '/webhook_mp.php';
+    exit;
+}
+
+if (!$isPayment) {
+    mp_log('webhook_unknown_type', [
+        'type' => $type ?: null,
+        'action' => $action ?: null,
+    ]);
     echo json_encode(['ok' => true], JSON_UNESCAPED_UNICODE);
     exit;
 }
@@ -47,8 +95,8 @@ if (!$paymentId) {
     exit;
 }
 
-$eventType = (string) ($payload['type'] ?? 'payment');
-$action = isset($payload['action']) ? (string) $payload['action'] : null;
+$eventType = $type ?: 'payment';
+$action = $action !== '' ? $action : null;
 $stored = mp_store_webhook_event($pdo, $payload, $headers, (string) $paymentId, $eventType, $action);
 if ($stored['duplicate']) {
     mp_log('payment_webhook_duplicate', ['event_id' => $stored['event_id']]);
@@ -165,6 +213,11 @@ try {
         );
         $stmtUpdate->execute($updateValues);
     }
+    mp_log('invoice_updated', [
+        'payment_id' => $paymentId,
+        'invoice_id' => $invoiceId,
+        'status' => $invoiceStatus,
+    ]);
 
     if ($invoiceStatus === 'paid' && $lojaId && sh_column_exists($pdo, 'lojas', 'paid_until')) {
         $updates = ['paid_until = DATE_ADD(CASE WHEN paid_until > NOW() THEN paid_until ELSE NOW() END, INTERVAL 1 MONTH)'];
