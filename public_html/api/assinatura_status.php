@@ -40,23 +40,24 @@ try {
     $latestInvoice = null;
 }
 
+$snapshot['last_payment_status'] = $latestStatus;
+
 if ($latestStatus) {
     $now = new DateTimeImmutable('now');
-    $pendingTooLong = false;
-    if ($latestStatus === 'pending' && $latestCreatedAt) {
-        $pendingTooLong = $latestCreatedAt <= $now->modify('-6 hours');
+    $withinWindow = true;
+    if ($latestCreatedAt) {
+        $withinWindow = $latestCreatedAt >= $now->modify('-24 hours');
     }
 
-    if ($latestStatus === 'failed' || $pendingTooLong) {
-        $paymentSuggestion = 'pix';
-        $paymentSuggestionText = 'Pagamento recusado por segurança. Tente PIX/Boleto.';
-        if ($latestStatus === 'failed') {
-            mp_log('payment_rejected_suggest_pix', [
-                'invoice_id' => $latestInvoiceId,
-                'payment_id' => $latestPaymentId,
-                'status_detail' => null,
-            ]);
-        }
+    if ($latestStatus === 'failed' && $withinWindow) {
+        $paymentSuggestion = 'alt_payments';
+        $paymentSuggestionText = 'Pagamento recusado. Recomendamos PIX/Boleto.';
+        $snapshot['message'] = $paymentSuggestionText;
+        mp_log('payment_rejected_suggest_alt', [
+            'invoice_id' => $latestInvoiceId,
+            'payment_id' => $latestPaymentId,
+            'created_at' => $latestCreatedAt ? $latestCreatedAt->format('Y-m-d H:i:s') : null,
+        ]);
     }
 }
 

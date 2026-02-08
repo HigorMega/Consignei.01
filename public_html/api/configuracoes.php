@@ -40,12 +40,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 
         $resp = $config ?: [];
 
-        // Puxa slug da tabela lojas (PK = id)
+        // Puxa slug e dados do responsável da tabela lojas (PK = id)
         try {
-            $stSlug = $pdo->prepare("SELECT slug FROM lojas WHERE id = ? LIMIT 1");
-            $stSlug->execute([$loja_id]);
-            $slug = $stSlug->fetchColumn();
-            if ($slug !== false) $resp['slug'] = $slug;
+            $lojaFields = ['slug'];
+            $hasPayerFirst = sh_column_exists($pdo, 'lojas', 'payer_first_name');
+            $hasPayerLast = sh_column_exists($pdo, 'lojas', 'payer_last_name');
+            if ($hasPayerFirst) {
+                $lojaFields[] = 'payer_first_name';
+            }
+            if ($hasPayerLast) {
+                $lojaFields[] = 'payer_last_name';
+            }
+
+            $stLoja = $pdo->prepare("SELECT " . implode(', ', $lojaFields) . " FROM lojas WHERE id = ? LIMIT 1");
+            $stLoja->execute([$loja_id]);
+            $lojaRow = $stLoja->fetch(PDO::FETCH_ASSOC);
+            if ($lojaRow) {
+                if (!empty($lojaRow['slug'])) {
+                    $resp['slug'] = $lojaRow['slug'];
+                }
+                if ($hasPayerFirst) {
+                    $resp['payer_first_name'] = $lojaRow['payer_first_name'] ?? null;
+                }
+                if ($hasPayerLast) {
+                    $resp['payer_last_name'] = $lojaRow['payer_last_name'] ?? null;
+                }
+            }
         } catch (PDOException $e) {
             // não quebra o retorno se slug der erro
         }
@@ -76,6 +96,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $corFundo = $data['cor_fundo'] ?? '#ffffff';
     $texturaFundo = $data['textura_fundo'] ?? 'liso';
     $bannerAviso = trim((string)($data['banner_aviso'] ?? ''));
+    $payerFirstName = trim((string) ($data['payer_first_name'] ?? ''));
+    $payerLastName = trim((string) ($data['payer_last_name'] ?? ''));
+    if (mb_strlen($payerFirstName) > 60) {
+        $payerFirstName = mb_substr($payerFirstName, 0, 60);
+    }
+    if (mb_strlen($payerLastName) > 60) {
+        $payerLastName = mb_substr($payerLastName, 0, 60);
+    }
     if (mb_strlen($bannerAviso) > 120) {
         $bannerAviso = mb_substr($bannerAviso, 0, 120);
     }
@@ -159,6 +187,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo->rollBack();
             echo json_encode(['success' => false, 'message' => 'Erro ao executar SQL.']);
             exit;
+        }
+
+        $hasPayerFirst = sh_column_exists($pdo, 'lojas', 'payer_first_name');
+        $hasPayerLast = sh_column_exists($pdo, 'lojas', 'payer_last_name');
+
+        if ($hasPayerFirst || $hasPayerLast) {
+            $lojaUpdates = [];
+            $lojaValues = [];
+            if ($hasPayerFirst) {
+                $lojaUpdates[] = 'payer_first_name = ?';
+                $lojaValues[] = $payerFirstName !== '' ? $payerFirstName : null;
+            }
+            if ($hasPayerLast) {
+                $lojaUpdates[] = 'payer_last_name = ?';
+                $lojaValues[] = $payerLastName !== '' ? $payerLastName : null;
+            }
+            if ($lojaUpdates) {
+                $lojaValues[] = $loja_id;
+                $stLojaUpdate = $pdo->prepare("UPDATE lojas SET " . implode(', ', $lojaUpdates) . " WHERE id = ? LIMIT 1");
+                $okLoja = $stLojaUpdate->execute($lojaValues);
+                if (!$okLoja) {
+                    $pdo->rollBack();
+                    echo json_encode(['success' => false, 'message' => 'Erro ao salvar dados do responsável.']);
+                    exit;
+                }
+            }
         }
 
         // Salva slug na tabela lojas (PK = id) com unicidade
