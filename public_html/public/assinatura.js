@@ -7,13 +7,30 @@ const paymentAlertText = document.getElementById('paymentAlertText');
 const btnAlertPayment = document.getElementById('btnAlertPayment');
 const faturasContent = document.getElementById('faturasContent');
 const planDescription = document.getElementById('planDescription');
+const payerFirstNameInput = document.getElementById('payerFirstName');
+const payerLastNameInput = document.getElementById('payerLastName');
 const redirectEndpoint = '/api/billing_create_checkout.php?redirect=1';
 const altRedirectEndpoint = '/api/checkout_create.php?redirect=1';
 const REDIRECT_FALLBACK_DELAY = 2000;
 let redirectNotice = null;
 let redirectTimeout = null;
-let altPaymentsEnabled = false;
+let altPaymentsEnabled = true;
 let altPaymentsDefault = 'all';
+
+const getPayerPayload = () => {
+    const firstName = payerFirstNameInput?.value?.trim() || '';
+    const lastName = payerLastNameInput?.value?.trim() || '';
+    return { firstName, lastName };
+};
+
+const buildAltRedirectUrl = (method, payer) => {
+    const params = new URLSearchParams();
+    params.set('redirect', '1');
+    params.set('method', method || 'all');
+    if (payer.firstName) params.set('payer_first_name', payer.firstName);
+    if (payer.lastName) params.set('payer_last_name', payer.lastName);
+    return `/api/checkout_create.php?${params.toString()}`;
+};
 
 const ensureRedirectNotice = () => {
     if (redirectNotice) return redirectNotice;
@@ -110,7 +127,8 @@ const carregarFaturas = async () => {
 
 const openAltPayment = async (method) => {
     const normalizedMethod = method || 'all';
-    const redirectUrl = `${altRedirectEndpoint}&method=${encodeURIComponent(normalizedMethod)}`;
+    const payer = getPayerPayload();
+    const redirectUrl = buildAltRedirectUrl(normalizedMethod, payer);
     const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
     if (isMobile) {
@@ -126,7 +144,16 @@ const openAltPayment = async (method) => {
 
     try {
         const response = await fetch(`/api/checkout_create.php?method=${encodeURIComponent(normalizedMethod)}`, {
+            method: 'POST',
             credentials: 'include',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                method: normalizedMethod,
+                payer_first_name: payer.firstName,
+                payer_last_name: payer.lastName,
+            }),
         });
         if (!response.ok) {
             throw new Error('Falha ao iniciar pagamento.');
@@ -284,7 +311,7 @@ const carregarConfiguracaoAssinatura = async () => {
     } catch (error) {
         planDescription.textContent = 'Plano mensal R$ 21,90/mês. Cancele quando quiser.';
         if (btnAltPayment) {
-            btnAltPayment.classList.add('is-hidden');
+            btnAltPayment.classList.remove('is-hidden');
         }
     }
 };
