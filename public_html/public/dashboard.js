@@ -325,26 +325,21 @@ async function executarCheckoutAssinatura(event) {
         event.preventDefault();
         event.stopPropagation();
     }
-    try {
-        const response = await fetch(API.billing_checkout, {
-            method: 'POST',
-            credentials: 'include',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({})
-        });
-        const payload = await response.json();
-        if (!payload?.success || !payload.checkout_url) {
-            throw new Error(payload?.detail || payload?.message || 'Não foi possível iniciar o pagamento.');
-        }
-
-        const checkoutUrl = payload.checkout_url;
-        console.log('checkout_url:', checkoutUrl);
-        window.open(checkoutUrl, '_blank');
-        setCheckoutNotice(true, 'Pagamento aberto em nova aba. Após concluir, volte para o app.');
-        iniciarPollingAssinatura();
-    } catch (error) {
-        Swal.fire({ icon: 'error', title: 'Erro', text: error.message || 'Falha ao iniciar o pagamento.' });
+    const continuarCheckoutBtn = document.getElementById('btnContinuarCheckout');
+    const redirectUrl = `${API.billing_checkout}?redirect=1`;
+    if (continuarCheckoutBtn) {
+        continuarCheckoutBtn.disabled = true;
+        continuarCheckoutBtn.textContent = 'Redirecionando...';
     }
+    setCheckoutNotice(false);
+    setTimeout(() => {
+        const notice = document.getElementById('checkoutNotice');
+        if (notice) {
+            notice.innerHTML = `Se não abrir automaticamente, <a href="${redirectUrl}">clique aqui</a>.`;
+            notice.style.display = 'block';
+        }
+    }, 2000);
+    window.location.href = redirectUrl;
 }
 
 document.addEventListener('DOMContentLoaded', () => {
