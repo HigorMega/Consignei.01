@@ -82,8 +82,10 @@ try {
         ],
     ];
 
-    mp_log('checkout_preference_start', ['loja_id' => $lojaId, 'external_reference' => $externalReference]);
-    mp_log('checkout_preference_payload', ['payload' => $payload]);
+    mp_log('checkout_preference_start', [
+        'loja_id' => $lojaId,
+        'external_reference' => $externalReference,
+    ]);
 
     $response = mp_request('POST', '/checkout/preferences', $payload);
     $data = $response['data'] ?? [];

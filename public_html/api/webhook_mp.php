@@ -10,7 +10,12 @@ require_once __DIR__ . "/../lib/mercadopago.php";
 $payloadRaw = file_get_contents('php://input') ?: '';
 $payload = json_decode($payloadRaw, true) ?: [];
 $headers = mp_get_request_headers();
-mp_log('preapproval_webhook_received', ['payload' => $payload]);
+mp_log('preapproval_webhook_received', [
+    'event_id' => $payload['id'] ?? null,
+    'resource_id' => $payload['data']['id'] ?? null,
+    'type' => $payload['type'] ?? null,
+    'action' => $payload['action'] ?? null,
+]);
 
 if (!mp_validate_webhook_signature($payloadRaw, $headers)) {
     mp_log('preapproval_webhook_invalid_signature');
@@ -55,6 +60,8 @@ if (!$preapprovalResponse['success']) {
 $preapproval = $preapprovalResponse['data'] ?? [];
 $status = $preapproval['status'] ?? 'unknown';
 $externalReference = $preapproval['external_reference'] ?? null;
+$startDateRaw = $preapproval['auto_recurring']['start_date'] ?? null;
+$nextPaymentDateRaw = $preapproval['next_payment_date'] ?? null;
 
 $lojaId = null;
 $invoiceId = null;
@@ -82,8 +89,8 @@ if ($invoice) {
 if (!$lojaId) {
     if ($externalReference && ctype_digit((string) $externalReference)) {
         $lojaId = (int) $externalReference;
-    } elseif (sh_column_exists($pdo, 'lojas', 'assinatura_id')) {
-        $stmt = $pdo->prepare("SELECT id FROM lojas WHERE assinatura_id = ? LIMIT 1");
+    } elseif (sh_column_exists($pdo, 'lojas', 'subscription_id')) {
+        $stmt = $pdo->prepare("SELECT id FROM lojas WHERE subscription_id = ? LIMIT 1");
         $stmt->execute([$preapprovalId]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         if ($row) {
@@ -105,42 +112,83 @@ if (!$lojaId) {
 $updates = [];
 $values = [];
 
-if (sh_column_exists($pdo, 'lojas', 'assinatura_status')) {
-    $updates[] = 'assinatura_status = ?';
-    $values[] = $status;
+$activeStatuses = ['authorized', 'active', 'approved'];
+$inactiveStatuses = ['paused', 'cancelled', 'cancelled_by_user', 'expired', 'rejected'];
+$trialStatus = 'trial';
+$activeStatus = 'active';
+$cancelledStatus = 'cancelled';
+
+$now = new DateTimeImmutable('now');
+$startDate = sh_parse_datetime($startDateRaw);
+$nextPaymentDate = sh_parse_datetime($nextPaymentDateRaw);
+
+$mpPaymentId = $preapproval['last_payment_id'] ?? $preapproval['payment_id'] ?? null;
+if (!$mpPaymentId && !empty($preapproval['last_payment']['id'])) {
+    $mpPaymentId = $preapproval['last_payment']['id'];
 }
-if (sh_column_exists($pdo, 'lojas', 'assinatura_gateway')) {
-    $updates[] = 'assinatura_gateway = ?';
-    $values[] = 'mercadopago';
+
+$shouldSetTrial = false;
+$shouldSetActive = false;
+$shouldBlock = false;
+
+if (in_array($status, $activeStatuses, true)) {
+    if (!$mpPaymentId) {
+        if ($startDate && $now < $startDate) {
+            $shouldSetTrial = true;
+        } else {
+            $shouldBlock = true;
+        }
+    } else {
+        $shouldSetActive = true;
+    }
+} elseif (in_array($status, $inactiveStatuses, true)) {
+    $shouldBlock = true;
 }
-if (sh_column_exists($pdo, 'lojas', 'assinatura_id')) {
-    $updates[] = 'assinatura_id = ?';
+
+if (sh_column_exists($pdo, 'lojas', 'subscription_id')) {
+    $updates[] = 'subscription_id = ?';
     $values[] = $preapprovalId;
 }
 
-$activeStatuses = ['authorized', 'active', 'approved'];
-$inactiveStatuses = ['paused', 'cancelled', 'cancelled_by_user', 'expired', 'rejected'];
+if (sh_column_exists($pdo, 'lojas', 'subscription_status')) {
+    if ($shouldSetTrial) {
+        $updates[] = 'subscription_status = ?';
+        $values[] = $trialStatus;
+    } elseif ($shouldSetActive) {
+        $updates[] = 'subscription_status = ?';
+        $values[] = $activeStatus;
+    } elseif ($shouldBlock) {
+        $updates[] = 'subscription_status = ?';
+        $values[] = $cancelledStatus;
+    } else {
+        $updates[] = 'subscription_status = ?';
+        $values[] = 'pending';
+    }
+}
 
-if (in_array($status, $activeStatuses, true) && sh_column_exists($pdo, 'lojas', 'paid_until')) {
-    $nextPaymentDate = $preapproval['next_payment_date'] ?? null;
-    $startDate = $preapproval['auto_recurring']['start_date'] ?? null;
+if (sh_column_exists($pdo, 'lojas', 'trial_until')) {
+    if ($shouldSetTrial) {
+        $trialUntil = $startDate ?? $nextPaymentDate;
+        $updates[] = 'trial_until = ?';
+        $values[] = $trialUntil ? $trialUntil->format('Y-m-d H:i:s') : null;
+    } else {
+        $updates[] = 'trial_until = ?';
+        $values[] = null;
+    }
+}
 
-    $paidUntil = null;
-    if ($nextPaymentDate) {
-        $paidUntil = sh_parse_datetime($nextPaymentDate);
-    } elseif ($startDate) {
-        $startAt = sh_parse_datetime($startDate);
-        if ($startAt) {
-            $paidUntil = $startAt->modify('+1 month');
+if (sh_column_exists($pdo, 'lojas', 'paid_until')) {
+    if ($shouldSetActive) {
+        $paidUntil = $nextPaymentDate;
+        if (!$paidUntil && $startDate) {
+            $paidUntil = $startDate->modify('+1 month');
         }
-    }
-
-    if ($paidUntil) {
         $updates[] = 'paid_until = ?';
-        $values[] = $paidUntil->format('Y-m-d H:i:s');
+        $values[] = $paidUntil ? $paidUntil->format('Y-m-d H:i:s') : null;
+    } else {
+        $updates[] = 'paid_until = ?';
+        $values[] = null;
     }
-} elseif (in_array($status, $inactiveStatuses, true)) {
-    // Não estende paid_until para status inativos
 }
 
 $pdo->beginTransaction();
@@ -151,16 +199,11 @@ try {
         $stmtUpdate->execute($values);
     }
 
-    $mpPaymentId = $preapproval['last_payment_id'] ?? $preapproval['payment_id'] ?? null;
-    if (!$mpPaymentId && !empty($preapproval['last_payment']['id'])) {
-        $mpPaymentId = $preapproval['last_payment']['id'];
-    }
-
     $amount = $preapproval['auto_recurring']['transaction_amount'] ?? (float) env('SUBSCRIPTION_PRICE', '21.90');
     $currency = $preapproval['auto_recurring']['currency_id'] ?? 'BRL';
 
     $periodStart = sh_parse_datetime($preapproval['last_payment_date'] ?? null);
-    $periodEnd = sh_parse_datetime($preapproval['next_payment_date'] ?? null);
+    $periodEnd = $nextPaymentDate;
 
     $invoiceStatus = mp_map_preapproval_status($status);
     $paidAt = null;
@@ -178,6 +221,12 @@ try {
                 $periodStart = sh_parse_datetime($payment['date_created'] ?? null);
             }
         }
+    }
+
+    if ($shouldSetTrial || (!$mpPaymentId && in_array($status, $activeStatuses, true))) {
+        $invoiceStatus = 'pending';
+    } elseif ($shouldBlock && in_array($status, $inactiveStatuses, true)) {
+        $invoiceStatus = 'failed';
     }
 
     $invoiceData = [
@@ -206,13 +255,6 @@ try {
         $stmtInvoice = $pdo->prepare("SELECT id FROM invoices WHERE mp_preapproval_id = ? ORDER BY id DESC LIMIT 1");
         $stmtInvoice->execute([$preapprovalId]);
         $existing = $stmtInvoice->fetch(PDO::FETCH_ASSOC);
-    } else {
-        $stmtInvoice = $pdo->prepare("SELECT id, status FROM invoices WHERE assinatura_id = ? AND mp_payment_id IS NULL ORDER BY id DESC LIMIT 1");
-        $stmtInvoice->execute([$preapprovalId]);
-        $existing = $stmtInvoice->fetch(PDO::FETCH_ASSOC);
-        if ($existing && $existing['status'] === $invoiceStatus) {
-            $existing = null;
-        }
     }
 
     if ($existing) {
@@ -278,7 +320,33 @@ try {
         $stmtInsertInvoice = $pdo->prepare(
             "INSERT INTO invoices (" . implode(', ', $columns) . ") VALUES (" . implode(', ', $placeholders) . ")"
         );
-        $stmtInsertInvoice->execute($values);
+        try {
+            $stmtInsertInvoice->execute($values);
+        } catch (PDOException $e) {
+            if ((int) $e->getCode() === 23000) {
+                $stmtInvoice = $pdo->prepare("SELECT id FROM invoices WHERE mp_preapproval_id = ? LIMIT 1");
+                $stmtInvoice->execute([$preapprovalId]);
+                $existing = $stmtInvoice->fetch(PDO::FETCH_ASSOC);
+                if ($existing) {
+                    $stmtUpdateInvoice = $pdo->prepare(
+                        "UPDATE invoices SET status = ?, amount = ?, currency = ?, period_start = ?, period_end = ?, paid_at = ?, mp_payment_id = ?, external_reference = ? WHERE id = ?"
+                    );
+                    $stmtUpdateInvoice->execute([
+                        $invoiceData['status'],
+                        $invoiceData['amount'],
+                        $invoiceData['currency'],
+                        $invoiceData['period_start'],
+                        $invoiceData['period_end'],
+                        $invoiceData['paid_at'],
+                        $invoiceData['mp_payment_id'],
+                        $invoiceData['external_reference'],
+                        $existing['id'],
+                    ]);
+                }
+            } else {
+                throw $e;
+            }
+        }
     }
 
     $pdo->commit();

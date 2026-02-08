@@ -40,9 +40,8 @@ try {
 
     $notificationUrl = $appUrl . '/api/webhook_mp.php';
     $backUrl = $appUrl . '/public/assinatura_retorno.html';
-    $startDate = sh_format_mp_datetime(
-        (new DateTimeImmutable('now'))->modify('+5 days')
-    );
+    $trialStart = (new DateTimeImmutable('now'))->modify('+5 days');
+    $startDate = sh_format_mp_datetime($trialStart);
     $assinaturaId = 'sub:' . uniqid();
     $hasExternalReference = sh_column_exists($pdo, 'invoices', 'external_reference');
 
@@ -94,8 +93,11 @@ try {
         'status' => 'pending',
     ];
 
-    mp_log('billing_preapproval_start', ['loja_id' => $lojaId, 'external_reference' => $externalReference]);
-    mp_log('billing_preapproval_payload', ['payload' => $payload]);
+    mp_log('billing_preapproval_start', [
+        'loja_id' => $lojaId,
+        'external_reference' => $externalReference,
+        'start_date' => $startDate,
+    ]);
 
     $response = mp_request('POST', '/preapproval', $payload);
     $data = $response['data'] ?? [];
@@ -142,17 +144,21 @@ try {
 
     $updates = [];
     $values = [];
-    if (sh_column_exists($pdo, 'lojas', 'assinatura_gateway')) {
-        $updates[] = 'assinatura_gateway = ?';
-        $values[] = 'mercadopago';
+    if (sh_column_exists($pdo, 'lojas', 'subscription_id')) {
+        $updates[] = 'subscription_id = ?';
+        $values[] = (string) $data['id'];
     }
-    if (sh_column_exists($pdo, 'lojas', 'assinatura_id')) {
-        $updates[] = 'assinatura_id = ?';
-        $values[] = $data['id'];
+    if (sh_column_exists($pdo, 'lojas', 'subscription_status')) {
+        $updates[] = 'subscription_status = ?';
+        $values[] = 'trial';
     }
-    if (sh_column_exists($pdo, 'lojas', 'assinatura_status')) {
-        $updates[] = 'assinatura_status = ?';
-        $values[] = 'pending';
+    if (sh_column_exists($pdo, 'lojas', 'trial_until')) {
+        $updates[] = 'trial_until = ?';
+        $values[] = $trialStart->format('Y-m-d H:i:s');
+    }
+    if (sh_column_exists($pdo, 'lojas', 'paid_until')) {
+        $updates[] = 'paid_until = ?';
+        $values[] = null;
     }
 
     if ($updates) {
@@ -164,6 +170,7 @@ try {
     echo json_encode([
         'success' => true,
         'checkout_url' => $data['init_point'] ?? null,
+        'init_point' => $data['init_point'] ?? null,
     ], JSON_UNESCAPED_UNICODE);
 } catch (Exception $e) {
     mp_log('billing_preapproval_error', ['error' => $e->getMessage()]);
