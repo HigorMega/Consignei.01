@@ -24,17 +24,32 @@ foreach ($headers as $k => $v) {
 $type = (string) ($payload['type'] ?? '');
 $action = (string) ($payload['action'] ?? '');
 $liveMode = (bool) ($payload['live_mode'] ?? false);
+$eventId = (string) ($payload['id'] ?? '');
+$resourceId = (string) ($payload['data']['id'] ?? '');
+$isPanelTest = (!$liveMode) && ($eventId === '123456' || $resourceId === '123456');
 $hasSignature = !empty($h['x-signature']);
 $hasSecret = (bool) getenv('MP_WEBHOOK_SECRET');
 
 mp_log('webhook_headers_debug', [
     'live_mode' => $liveMode,
+    'event_id' => $eventId,
+    'resource_id' => $resourceId,
     'has_signature' => $hasSignature,
     'has_secret' => $hasSecret,
-    'type' => $type ?: null,
-    'action' => $action ?: null,
     'header_keys' => array_keys($h),
 ]);
+
+if ($isPanelTest) {
+    mp_log('webhook_panel_test_bypass', [
+        'event_id' => $eventId,
+        'resource_id' => $resourceId,
+        'type' => $payload['type'] ?? null,
+        'action' => $payload['action'] ?? null,
+    ]);
+    http_response_code(200);
+    echo json_encode(['ok' => true, 'panel_test' => true], JSON_UNESCAPED_UNICODE);
+    exit;
+}
 
 mp_log('webhook_received', [
     'event_id' => $payload['id'] ?? null,
@@ -64,17 +79,6 @@ if ($isPayment) {
         'type' => $type ?: null,
         'action' => $action ?: null,
     ]);
-}
-
-if (!$liveMode && !$hasSignature) {
-    mp_log('webhook_test_no_signature', [
-        'type' => $type ?: null,
-        'action' => $action ?: null,
-        'event_id' => $payload['id'] ?? null,
-    ]);
-    http_response_code(200);
-    echo json_encode(['ok' => true, 'test_mode' => true], JSON_UNESCAPED_UNICODE);
-    exit;
 }
 
 if ($liveMode && !$hasSignature) {
