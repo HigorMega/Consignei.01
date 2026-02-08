@@ -10,6 +10,13 @@ require_once __DIR__ . "/../lib/mercadopago.php";
 $payloadRaw = file_get_contents('php://input') ?: '';
 $payload = json_decode($payloadRaw, true) ?: [];
 $headers = mp_get_request_headers();
+
+if (($payload['type'] ?? '') === 'payment' || str_starts_with((string) ($payload['action'] ?? ''), 'payment.')) {
+    $GLOBALS['mp_webhook_raw_body'] = $payloadRaw;
+    $GLOBALS['mp_webhook_payload'] = $payload;
+    require __DIR__ . '/pagamentos_webhook.php';
+    exit;
+}
 mp_log('preapproval_webhook_received', [
     'event_id' => $payload['id'] ?? null,
     'resource_id' => $payload['data']['id'] ?? null,

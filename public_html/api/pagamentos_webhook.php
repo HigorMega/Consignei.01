@@ -13,8 +13,8 @@ require_once "../db/conexao.php";
 require_once __DIR__ . "/subscription_helpers.php";
 require_once __DIR__ . "/../lib/mercadopago.php";
 
-$rawBody = file_get_contents('php://input') ?: '';
-$payload = json_decode($rawBody, true) ?: [];
+$rawBody = $GLOBALS['mp_webhook_raw_body'] ?? (file_get_contents('php://input') ?: '');
+$payload = $GLOBALS['mp_webhook_payload'] ?? (json_decode($rawBody, true) ?: []);
 $headers = mp_get_request_headers();
 
 mp_log('payment_webhook_received', [
@@ -74,6 +74,12 @@ $transactionAmount = isset($payment['transaction_amount']) ? (float) $payment['t
 $currencyId = $payment['currency_id'] ?? null;
 $paidAt = sh_parse_datetime($payment['date_approved'] ?? $payment['date_created'] ?? null);
 
+mp_log('payment_fetched', [
+    'payment_id' => $paymentId,
+    'status' => $paymentStatus,
+    'external_reference' => $externalReference,
+]);
+
 $invoiceStatus = mp_map_payment_status($paymentStatus);
 
 $invoice = null;
@@ -83,18 +89,18 @@ $lojaId = null;
 if ($externalReference) {
     if (preg_match('/^(inv|subinv):(\d+)$/', (string) $externalReference, $matches)) {
         $invoiceId = (int) $matches[2];
-        $stmt = $pdo->prepare("SELECT id, loja_id FROM invoices WHERE id = ? LIMIT 1");
+        $stmt = $pdo->prepare("SELECT id, loja_id, status, mp_payment_id FROM invoices WHERE id = ? LIMIT 1");
         $stmt->execute([$invoiceId]);
         $invoice = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
     } elseif (sh_column_exists($pdo, 'invoices', 'external_reference')) {
-        $stmt = $pdo->prepare("SELECT id, loja_id FROM invoices WHERE external_reference = ? LIMIT 1");
+        $stmt = $pdo->prepare("SELECT id, loja_id, status, mp_payment_id FROM invoices WHERE external_reference = ? LIMIT 1");
         $stmt->execute([(string) $externalReference]);
         $invoice = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
     }
 }
 
 if (!$invoice && sh_column_exists($pdo, 'invoices', 'mp_payment_id')) {
-    $stmt = $pdo->prepare("SELECT id, loja_id FROM invoices WHERE mp_payment_id = ? LIMIT 1");
+    $stmt = $pdo->prepare("SELECT id, loja_id, status, mp_payment_id FROM invoices WHERE mp_payment_id = ? LIMIT 1");
     $stmt->execute([(string) $paymentId]);
     $invoice = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
 }
@@ -102,10 +108,26 @@ if (!$invoice && sh_column_exists($pdo, 'invoices', 'mp_payment_id')) {
 if ($invoice) {
     $invoiceId = (int) $invoice['id'];
     $lojaId = (int) $invoice['loja_id'];
+    mp_log('invoice_matched', [
+        'payment_id' => $paymentId,
+        'invoice_id' => $invoiceId,
+    ]);
 } else {
     mp_log('payment_webhook_invoice_not_found', [
         'payment_id' => $paymentId,
         'external_reference' => $externalReference,
+    ]);
+    echo json_encode(['ok' => true], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+if ((string) ($invoice['mp_payment_id'] ?? '') === (string) $paymentId
+    && in_array((string) ($invoice['status'] ?? ''), ['paid', 'failed'], true)
+) {
+    mp_log('payment_webhook_idempotent_skip', [
+        'payment_id' => $paymentId,
+        'invoice_id' => $invoiceId,
+        'status' => $invoice['status'] ?? null,
     ]);
     echo json_encode(['ok' => true], JSON_UNESCAPED_UNICODE);
     exit;
@@ -145,10 +167,8 @@ try {
     }
 
     if ($invoiceStatus === 'paid' && $lojaId && sh_column_exists($pdo, 'lojas', 'paid_until')) {
-        $baseDate = $paidAt ?: new DateTimeImmutable('now');
-        $paidUntil = $baseDate->modify('+1 month')->format('Y-m-d H:i:s');
-        $updates = ['paid_until = ?'];
-        $values = [$paidUntil];
+        $updates = ['paid_until = DATE_ADD(CASE WHEN paid_until > NOW() THEN paid_until ELSE NOW() END, INTERVAL 1 MONTH)'];
+        $values = [];
         if (sh_column_exists($pdo, 'lojas', 'trial_until')) {
             $updates[] = 'trial_until = ?';
             $values[] = null;
@@ -160,6 +180,10 @@ try {
         $values[] = $lojaId;
         $stmtUpdateLoja = $pdo->prepare("UPDATE lojas SET " . implode(', ', $updates) . " WHERE id = ?");
         $stmtUpdateLoja->execute($values);
+        mp_log('paid_until_updated', [
+            'payment_id' => $paymentId,
+            'loja_id' => $lojaId,
+        ]);
     } elseif ($invoiceStatus === 'failed' && $lojaId) {
         $updates = [];
         $values = [];
