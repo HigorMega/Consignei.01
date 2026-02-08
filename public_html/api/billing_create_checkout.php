@@ -40,7 +40,9 @@ try {
 
     $notificationUrl = $appUrl . '/api/webhook_mp.php';
     $backUrl = $appUrl . '/public/assinatura_retorno.html';
-    $trialStart = (new DateTimeImmutable('now'))->modify('+5 days');
+    $trialDays = TRIAL_DAYS;
+    $nowUtc = new DateTimeImmutable('now', new DateTimeZone('UTC'));
+    $trialStart = $trialDays > 0 ? $nowUtc->modify('+' . $trialDays . ' days') : $nowUtc;
     $startDate = sh_format_mp_datetime($trialStart);
     $assinaturaId = 'sub:' . uniqid();
     $hasExternalReference = sh_column_exists($pdo, 'invoices', 'external_reference');
@@ -150,11 +152,11 @@ try {
     }
     if (sh_column_exists($pdo, 'lojas', 'subscription_status')) {
         $updates[] = 'subscription_status = ?';
-        $values[] = 'trial';
+        $values[] = $trialDays > 0 ? 'trial' : 'pending';
     }
     if (sh_column_exists($pdo, 'lojas', 'trial_until')) {
         $updates[] = 'trial_until = ?';
-        $values[] = $trialStart->format('Y-m-d H:i:s');
+        $values[] = $trialDays > 0 ? $trialStart->format('Y-m-d H:i:s') : null;
     }
     if (sh_column_exists($pdo, 'lojas', 'paid_until')) {
         $updates[] = 'paid_until = ?';

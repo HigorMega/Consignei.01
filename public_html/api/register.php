@@ -121,16 +121,19 @@ try {
     if ($hasTrialUntilColumn || $hasSubscriptionStatusColumn) {
         $updates = [];
         $values = [];
+        $trialDays = TRIAL_DAYS;
+        $nowUtc = new DateTimeImmutable('now', new DateTimeZone('UTC'));
 
         if ($hasTrialUntilColumn) {
-            $trialUntil = (new DateTimeImmutable('now'))->modify('+5 days')->format('Y-m-d H:i:s');
             $updates[] = "trial_until = ?";
-            $values[] = $trialUntil;
+            $values[] = $trialDays > 0
+                ? $nowUtc->modify('+' . $trialDays . ' days')->format('Y-m-d H:i:s')
+                : null;
         }
 
         if ($hasSubscriptionStatusColumn) {
             $updates[] = "subscription_status = ?";
-            $values[] = "trial";
+            $values[] = $trialDays > 0 ? "trial" : "pending";
         }
 
         if ($updates) {

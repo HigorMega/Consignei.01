@@ -370,7 +370,7 @@
                 <div style="display:flex; align-items:center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
                     <div>
                         <h3 style="font-size: 16px; margin:0; color:#444;">Assinatura</h3>
-                        <p style="margin:6px 0 0; font-size: 12px; color:#777;">Plano mensal R$ 21,90 com 5 dias de teste grátis.</p>
+                        <p id="assinaturaPlanHint" style="margin:6px 0 0; font-size: 12px; color:#777;">Plano mensal R$ 21,90.</p>
                     </div>
                     <span id="assinaturaStatusBadge" class="status-badge status-pending">Pendente</span>
                 </div>
@@ -511,8 +511,8 @@
             <p class="modal-desc" id="modalPagamentoDesc">Você será redirecionado para concluir o pagamento.</p>
         </div>
         <div style="display:flex; align-items:center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 18px;">
-            <div style="font-size: 13px; color:#444; font-weight: 600;">R$ 21,90 / mês</div>
-            <div style="font-size: 12px; color:#777;">5 dias grátis</div>
+            <div id="assinaturaModalPrice" style="font-size: 13px; color:#444; font-weight: 600;">R$ 21,90 / mês</div>
+            <div id="assinaturaModalTrial" style="font-size: 12px; color:#777;"></div>
         </div>
         <p id="checkoutNotice" style="display: none; font-size: 12px; color:#666; margin-top: 12px;"></p>
         <div class="modal-actions" style="margin-top: 20px;">

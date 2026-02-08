@@ -46,3 +46,19 @@ function env(string $key, ?string $default = null): ?string {
 
 loadEnvFile(__DIR__ . '/../.env');
 loadEnvFile(__DIR__ . '/../.env.example');
+
+function get_trial_days(): int {
+    $rawValue = env('TRIAL_DAYS', '0');
+    $trialDays = is_numeric($rawValue) ? (int) $rawValue : 0;
+    if ($trialDays < 0) {
+        $trialDays = 0;
+    }
+    if ($trialDays > 60) {
+        $trialDays = 60;
+    }
+    return $trialDays;
+}
+
+if (!defined('TRIAL_DAYS')) {
+    define('TRIAL_DAYS', get_trial_days());
+}
