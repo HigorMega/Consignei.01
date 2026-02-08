@@ -17,6 +17,11 @@ function mp_log(string $message, array $context = []): void
     file_put_contents($logDir . '/mercadopago.log', $entry . PHP_EOL, FILE_APPEND | LOCK_EX);
 }
 
+function mp_iso_utc(DateTimeImmutable $dt): string
+{
+    return $dt->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d\TH:i:s\Z');
+}
+
 function mp_calc_start_date(int $trialDays): string
 {
     $trialDays = max(0, $trialDays);
@@ -32,11 +37,11 @@ function mp_calc_start_date(int $trialDays): string
         $start = $nowUtc->modify('+2 minutes');
     }
 
-    $startDate = $start->format('Y-m-d\TH:i:s\Z');
+    $startDate = mp_iso_utc($start);
     mp_log('mp_preapproval_start_date_calculated', [
         'trial_days' => $trialDays,
         'start_date' => $startDate,
-        'now_utc' => $nowUtc->format('Y-m-d\TH:i:s\Z'),
+        'now_utc' => mp_iso_utc($nowUtc),
     ]);
 
     return $startDate;
