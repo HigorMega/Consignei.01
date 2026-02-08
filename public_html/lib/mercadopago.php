@@ -126,13 +126,14 @@ function mp_get_request_headers(): array
 function mp_validate_webhook_signature(array $headers, array $payload, ?string $secret = null): bool
 {
     $secret = $secret ?? env('MP_WEBHOOK_SECRET');
-    if (!$secret) {
-        return true;
+    if ($secret === null || $secret === '') {
+        return false;
     }
 
     $normalized = mp_normalize_headers($headers);
     $signatureHeader = $normalized['x-signature'] ?? '';
-    if ($signatureHeader === '') {
+    $requestId = $normalized['x-request-id'] ?? '';
+    if ($signatureHeader === '' || $requestId === '') {
         return false;
     }
 
@@ -146,20 +147,19 @@ function mp_validate_webhook_signature(array $headers, array $payload, ?string $
         $pairs[$key] = $value;
     }
 
-    $timestamp = $pairs['ts'] ?? null;
-    $signature = $pairs['v1'] ?? null;
-    if (!$timestamp || !$signature) {
+    $timestamp = $pairs['ts'] ?? '';
+    $signature = $pairs['v1'] ?? '';
+    if ($timestamp === '' || $signature === '') {
         return false;
     }
 
-    $rawBody = $GLOBALS['mp_webhook_raw_body'] ?? null;
-    if ($rawBody === null) {
-        $encoded = json_encode($payload, JSON_UNESCAPED_UNICODE);
-        $rawBody = $encoded === false ? '' : $encoded;
+    $resourceId = (string) ($payload['data']['id'] ?? '');
+    if ($resourceId === '') {
+        return false;
     }
 
-    $payloadToSign = $timestamp . '.' . $rawBody;
-    $computed = hash_hmac('sha256', $payloadToSign, $secret);
+    $manifest = 'id:' . $resourceId . ';request-id:' . $requestId . ';ts:' . $timestamp . ';';
+    $computed = hash_hmac('sha256', $manifest, $secret);
 
     return hash_equals($computed, $signature);
 }

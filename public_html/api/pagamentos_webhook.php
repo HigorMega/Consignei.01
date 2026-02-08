@@ -28,14 +28,49 @@ $eventId = (string) ($payload['id'] ?? '');
 $resourceId = (string) ($payload['data']['id'] ?? '');
 $isPanelTest = (!$liveMode) && ($eventId === '123456' || $resourceId === '123456');
 $hasSignature = !empty($h['x-signature']);
-$hasSecret = (bool) getenv('MP_WEBHOOK_SECRET');
+$hasRequestId = !empty($h['x-request-id']);
+$secretValue = (string) getenv('MP_WEBHOOK_SECRET');
+$hasSecret = $secretValue !== '';
+$secretLength = strlen($secretValue);
+
+$signaturePairs = [];
+$signatureHeader = $h['x-signature'] ?? '';
+if ($signatureHeader !== '') {
+    foreach (explode(',', $signatureHeader) as $chunk) {
+        $chunk = trim($chunk);
+        if ($chunk === '' || !str_contains($chunk, '=')) {
+            continue;
+        }
+        [$key, $value] = array_map('trim', explode('=', $chunk, 2));
+        $signaturePairs[$key] = $value;
+    }
+}
+$tsValue = $signaturePairs['ts'] ?? '';
+$v1Value = $signaturePairs['v1'] ?? '';
+$manifestPreview = null;
+$calcPrefix = null;
+if ($resourceId !== '' && $hasRequestId && $tsValue !== '') {
+    $manifest = 'id:' . $resourceId . ';request-id:' . $h['x-request-id'] . ';ts:' . $tsValue . ';';
+    $manifestPreview = substr($manifest, 0, 60);
+    if ($hasSecret) {
+        $calcPrefix = substr(hash_hmac('sha256', $manifest, $secretValue), 0, 8);
+    }
+}
+$v1Prefix = $v1Value !== '' ? substr($v1Value, 0, 8) : null;
 
 mp_log('webhook_headers_debug', [
     'live_mode' => $liveMode,
     'event_id' => $eventId,
     'resource_id' => $resourceId,
     'has_signature' => $hasSignature,
+    'has_request_id' => $hasRequestId,
+    'ts_exists' => $tsValue !== '',
+    'v1_exists' => $v1Value !== '',
+    'manifest_preview' => $manifestPreview,
+    'v1_prefix' => $v1Prefix,
+    'calc_prefix' => $calcPrefix,
     'has_secret' => $hasSecret,
+    'secret_length' => $secretLength,
     'header_keys' => array_keys($h),
 ]);
 
@@ -81,14 +116,8 @@ if ($isPayment) {
     ]);
 }
 
-if ($liveMode && !$hasSignature) {
-    http_response_code(401);
-    echo json_encode(['ok' => false, 'error' => 'missing_signature'], JSON_UNESCAPED_UNICODE);
-    exit;
-}
-
-if ($hasSignature && !mp_validate_webhook_signature($h, $payload, getenv('MP_WEBHOOK_SECRET'))) {
-    mp_log('webhook_signature_invalid', ['live_mode' => $liveMode]);
+if (!mp_validate_webhook_signature($h, $payload, $secretValue)) {
+    mp_log('webhook_signature_invalid', ['live_mode' => $liveMode, 'has_signature' => $hasSignature]);
     http_response_code(401);
     echo json_encode(['ok' => false, 'error' => 'invalid_signature'], JSON_UNESCAPED_UNICODE);
     exit;
