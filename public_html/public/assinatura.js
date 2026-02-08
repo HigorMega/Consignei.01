@@ -3,6 +3,19 @@ const trialBadge = document.getElementById('trialBadge');
 const btnAssinar = document.getElementById('btnAssinar');
 const faturasContent = document.getElementById('faturasContent');
 const planDescription = document.getElementById('planDescription');
+const redirectEndpoint = '../api/billing_create_checkout.php?redirect=1';
+let redirectNotice = null;
+
+const ensureRedirectNotice = () => {
+    if (redirectNotice) return redirectNotice;
+    redirectNotice = document.createElement('p');
+    redirectNotice.className = 'redirect-notice is-hidden';
+    redirectNotice.innerHTML = `Se não abrir automaticamente, <a href="${redirectEndpoint}">clique aqui</a>.`;
+    if (btnAssinar && btnAssinar.parentNode) {
+        btnAssinar.parentNode.insertBefore(redirectNotice, btnAssinar.nextSibling);
+    }
+    return redirectNotice;
+};
 
 const readJsonResponse = async (response) => {
     const text = await response.text();
@@ -100,37 +113,11 @@ const atualizarStatus = (status) => {
 
     statusMessage.textContent = 'Assinatura inativa. Ative para continuar usando o painel.';
     btnAssinar.textContent = 'Ativar assinatura';
-    btnAssinar.onclick = async () => {
+    btnAssinar.onclick = () => {
         btnAssinar.disabled = true;
-        btnAssinar.textContent = 'Processando...';
-        try {
-            const response = await fetch('../api/billing_create_checkout.php', {
-                method: 'POST',
-                credentials: 'include',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({}),
-            });
-
-            const data = await readJsonResponse(response);
-
-            if (!response.ok) {
-                alert(data.message || 'Não foi possível iniciar a assinatura.');
-                return;
-            }
-
-            const checkoutUrl = data.checkout_url || data.init_point;
-            if (data.success && checkoutUrl) {
-                window.location.href = checkoutUrl;
-                return;
-            }
-
-            alert(data.message || 'Não foi possível iniciar a assinatura.');
-        } catch (error) {
-            alert('Não foi possível iniciar a assinatura. Tente novamente.');
-        } finally {
-            btnAssinar.disabled = false;
-            btnAssinar.textContent = 'Ativar assinatura';
-        }
+        btnAssinar.textContent = 'Abrindo pagamento...';
+        ensureRedirectNotice().classList.remove('is-hidden');
+        window.location.href = redirectEndpoint;
     };
 };
 
