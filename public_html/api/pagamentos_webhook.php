@@ -23,6 +23,8 @@ foreach ($headers as $k => $v) {
 }
 $type = (string) ($payload['type'] ?? '');
 $action = (string) ($payload['action'] ?? '');
+$typeLower = strtolower($type);
+$actionLower = strtolower($action);
 $liveMode = (bool) ($payload['live_mode'] ?? false);
 $eventId = (string) ($payload['id'] ?? '');
 $resourceId = (string) ($payload['data']['id'] ?? '');
@@ -93,12 +95,15 @@ mp_log('webhook_received', [
     'action' => $action ?: null,
 ]);
 
-$isPayment = $type === 'payment' || ($action !== '' && str_starts_with($action, 'payment.'));
-$isSubscription = $type === 'subscription'
-    || $type === 'preapproval'
-    || ($action !== '' && (str_contains($action, 'preapproval')
-        || str_contains($action, 'subscription')
-        || str_contains($action, 'plan')));
+$isPayment = $typeLower === 'payment' || ($actionLower !== '' && str_starts_with($actionLower, 'payment.'));
+$isSubscription = $typeLower === 'subscription'
+    || $typeLower === 'subscription_preapproval'
+    || $typeLower === 'preapproval'
+    || ($typeLower !== '' && (str_contains($typeLower, 'preapproval')
+        || str_contains($typeLower, 'subscription')))
+    || ($actionLower !== '' && (str_contains($actionLower, 'preapproval')
+        || str_contains($actionLower, 'subscription')
+        || str_contains($actionLower, 'plan')));
 
 if ($isPayment) {
     mp_log('payment_webhook_received', [
@@ -129,6 +134,12 @@ $GLOBALS['mp_webhook_signature_validated'] = true;
 $GLOBALS['mp_webhook_logged'] = true;
 
 if ($isSubscription) {
+    mp_log('subscription_webhook_routed', [
+        'type' => $type ?: null,
+        'action' => $action ?: null,
+        'resource_id' => $resourceId ?: null,
+        'event_id' => $eventId ?: null,
+    ]);
     $GLOBALS['mp_webhook_raw_body'] = $rawBody;
     $GLOBALS['mp_webhook_payload'] = $payload;
     $GLOBALS['mp_webhook_headers'] = $headers;

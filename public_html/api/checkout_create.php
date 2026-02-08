@@ -1,28 +1,86 @@
 <?php
 // api/checkout_create.php
 session_start();
-header('Content-Type: application/json; charset=UTF-8');
 ini_set('display_errors', 0);
+
+$redirectMode = isset($_GET['redirect']) && $_GET['redirect'] === '1';
+if ($redirectMode && !defined('SH_REDIRECT_MODE')) {
+    define('SH_REDIRECT_MODE', true);
+}
 
 require_once "../db/conexao.php";
 require_once __DIR__ . "/subscription_helpers.php";
 require_once __DIR__ . "/../lib/mercadopago.php";
 
+function render_checkout_redirect_error(string $message, string $retryUrl): void
+{
+    header('Content-Type: text/html; charset=UTF-8');
+    $safeMessage = htmlspecialchars($message, ENT_QUOTES, 'UTF-8');
+    $safeRetry = htmlspecialchars($retryUrl, ENT_QUOTES, 'UTF-8');
+    echo "<!doctype html>
+<html lang=\"pt-BR\">
+<head>
+  <meta charset=\"UTF-8\" />
+  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />
+  <title>Pagamento</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 24px; color: #1f2a37; }
+    .box { max-width: 520px; margin: 0 auto; }
+    .actions { margin-top: 16px; }
+    .btn { display: inline-block; padding: 12px 18px; background: #2563eb; color: #fff; text-decoration: none; border-radius: 6px; }
+  </style>
+</head>
+<body>
+  <div class=\"box\">
+    <h3>Não foi possível iniciar o pagamento.</h3>
+    <p>{$safeMessage}</p>
+    <div class=\"actions\">
+      <a class=\"btn\" href=\"{$safeRetry}\">Tentar novamente</a>
+    </div>
+  </div>
+</body>
+</html>";
+    exit;
+}
+
 try {
+    if (!$redirectMode) {
+        header('Content-Type: application/json; charset=UTF-8');
+    }
+
     sh_require_login();
 
     $accessToken = mp_get_access_token();
     if (!$accessToken) {
+        if ($redirectMode) {
+            mp_log('checkout_redirect_error', ['message' => 'MP_ACCESS_TOKEN não configurado.']);
+            http_response_code(500);
+            render_checkout_redirect_error(
+                'Configuração de pagamento indisponível no momento.',
+                '/public/assinatura.html'
+            );
+        }
         throw new Exception('MP_ACCESS_TOKEN não configurado.');
     }
 
     $lojaId = (int)$_SESSION['loja_id'];
+    $method = strtolower((string) ($_GET['method'] ?? $_POST['method'] ?? 'all'));
+    if (!in_array($method, ['all', 'pix', 'boleto'], true)) {
+        $method = 'all';
+    }
     $stmt = $pdo->prepare("SELECT email FROM lojas WHERE id = ? LIMIT 1");
     $stmt->execute([$lojaId]);
     $loja = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$loja) {
         http_response_code(404);
+        if ($redirectMode) {
+            mp_log('checkout_redirect_error', ['message' => 'Loja não encontrada.']);
+            render_checkout_redirect_error(
+                'Não encontramos os dados da sua loja.',
+                '/public/assinatura.html'
+            );
+        }
         echo json_encode(['success' => false, 'message' => 'Loja não encontrada.']);
         exit;
     }
@@ -82,9 +140,30 @@ try {
         ],
     ];
 
+    if ($method === 'pix') {
+        $payload['payment_methods'] = [
+            'excluded_payment_types' => [
+                ['id' => 'credit_card'],
+                ['id' => 'debit_card'],
+                ['id' => 'ticket'],
+                ['id' => 'atm'],
+            ],
+        ];
+    } elseif ($method === 'boleto') {
+        $payload['payment_methods'] = [
+            'excluded_payment_types' => [
+                ['id' => 'credit_card'],
+                ['id' => 'debit_card'],
+                ['id' => 'bank_transfer'],
+                ['id' => 'atm'],
+            ],
+        ];
+    }
+
     mp_log('checkout_preference_start', [
         'loja_id' => $lojaId,
         'external_reference' => $externalReference,
+        'method' => $method,
     ]);
 
     $response = mp_request('POST', '/checkout/preferences', $payload);
@@ -117,13 +196,29 @@ try {
             'request_id' => $response['request_id'] ?? null,
         ]);
         http_response_code($response['status'] ?: 502);
+        if ($redirectMode) {
+            render_checkout_redirect_error($message, '/public/assinatura.html');
+        }
         echo json_encode(['success' => false, 'message' => $message], JSON_UNESCAPED_UNICODE);
         exit;
     }
 
     if (empty($data['id'])) {
         mp_log('checkout_preference_invalid', ['response' => $response['raw'] ?? null]);
+        if ($redirectMode) {
+            http_response_code(502);
+            render_checkout_redirect_error('Recebemos uma resposta inválida do Mercado Pago.', '/public/assinatura.html');
+        }
         throw new Exception('Resposta inválida do Mercado Pago.');
+    }
+
+    if ($redirectMode) {
+        $initPoint = (string) ($data['init_point'] ?? '');
+        if ($initPoint !== '') {
+            header('Location: ' . $initPoint, true, 302);
+            exit;
+        }
+        render_checkout_redirect_error('Link de pagamento indisponível.', '/public/assinatura.html');
     }
 
     echo json_encode([
@@ -134,6 +229,9 @@ try {
 } catch (Exception $e) {
     mp_log('checkout_preference_error', ['error' => $e->getMessage()]);
     http_response_code(500);
+    if ($redirectMode) {
+        render_checkout_redirect_error('Erro ao iniciar pagamento.', '/public/assinatura.html');
+    }
     echo json_encode(['success' => false, 'message' => $e->getMessage()], JSON_UNESCAPED_UNICODE);
 }
 ?>
