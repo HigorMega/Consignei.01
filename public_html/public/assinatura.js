@@ -3,8 +3,10 @@ const trialBadge = document.getElementById('trialBadge');
 const btnAssinar = document.getElementById('btnAssinar');
 const faturasContent = document.getElementById('faturasContent');
 const planDescription = document.getElementById('planDescription');
-const redirectEndpoint = '../api/billing_create_checkout.php?redirect=1';
+const redirectEndpoint = '/api/billing_create_checkout.php?redirect=1';
+const REDIRECT_FALLBACK_DELAY = 2000;
 let redirectNotice = null;
+let redirectTimeout = null;
 
 const ensureRedirectNotice = () => {
     if (redirectNotice) return redirectNotice;
@@ -115,8 +117,15 @@ const atualizarStatus = (status) => {
     btnAssinar.textContent = 'Ativar assinatura';
     btnAssinar.onclick = () => {
         btnAssinar.disabled = true;
-        btnAssinar.textContent = 'Abrindo pagamento...';
-        ensureRedirectNotice().classList.remove('is-hidden');
+        btnAssinar.textContent = 'Redirecionando...';
+        const notice = ensureRedirectNotice();
+        notice.classList.add('is-hidden');
+        if (redirectTimeout) {
+            clearTimeout(redirectTimeout);
+        }
+        redirectTimeout = setTimeout(() => {
+            notice.classList.remove('is-hidden');
+        }, REDIRECT_FALLBACK_DELAY);
         window.location.href = redirectEndpoint;
     };
 };

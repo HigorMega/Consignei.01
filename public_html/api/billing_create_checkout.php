@@ -179,8 +179,20 @@ try {
     }
 
     if ($redirectMode && !empty($data['init_point'])) {
-        mp_log('billing_redirect_mode', ['loja_id' => $lojaId, 'redirect' => true]);
-        header('Location: ' . $data['init_point'], true, 302);
+        mp_log('billing_redirect_mode', [
+            'loja_id' => $lojaId,
+            'external_reference' => $externalReference,
+        ]);
+        $initPoint = (string) $data['init_point'];
+        $parsed = parse_url($initPoint);
+        $initPointSafe = '';
+        if (!empty($parsed['host'])) {
+            $initPointSafe = $parsed['host'] . ($parsed['path'] ?? '');
+        }
+        mp_log('billing_redirect_to_init_point', [
+            'init_point' => $initPointSafe,
+        ]);
+        header('Location: ' . $initPoint, true, 302);
         exit;
     }
 
