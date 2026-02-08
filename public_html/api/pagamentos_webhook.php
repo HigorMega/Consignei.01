@@ -17,7 +17,12 @@ $rawBody = file_get_contents('php://input') ?: '';
 $payload = json_decode($rawBody, true) ?: [];
 $headers = mp_get_request_headers();
 
-mp_log('payment_webhook_received', ['payload' => $payload]);
+mp_log('payment_webhook_received', [
+    'event_id' => $payload['id'] ?? null,
+    'resource_id' => $payload['data']['id'] ?? ($payload['data_id'] ?? null),
+    'type' => $payload['type'] ?? null,
+    'action' => $payload['action'] ?? null,
+]);
 
 if (!mp_validate_webhook_signature($rawBody, $headers)) {
     mp_log('payment_webhook_invalid_signature');
@@ -140,9 +145,41 @@ try {
     }
 
     if ($invoiceStatus === 'paid' && $lojaId && sh_column_exists($pdo, 'lojas', 'paid_until')) {
-        $paidUntil = (new DateTimeImmutable('now'))->modify('+1 month')->format('Y-m-d H:i:s');
-        $stmtUpdateLoja = $pdo->prepare("UPDATE lojas SET paid_until = ? WHERE id = ?");
-        $stmtUpdateLoja->execute([$paidUntil, $lojaId]);
+        $baseDate = $paidAt ?: new DateTimeImmutable('now');
+        $paidUntil = $baseDate->modify('+1 month')->format('Y-m-d H:i:s');
+        $updates = ['paid_until = ?'];
+        $values = [$paidUntil];
+        if (sh_column_exists($pdo, 'lojas', 'trial_until')) {
+            $updates[] = 'trial_until = ?';
+            $values[] = null;
+        }
+        if (sh_column_exists($pdo, 'lojas', 'subscription_status')) {
+            $updates[] = 'subscription_status = ?';
+            $values[] = 'active';
+        }
+        $values[] = $lojaId;
+        $stmtUpdateLoja = $pdo->prepare("UPDATE lojas SET " . implode(', ', $updates) . " WHERE id = ?");
+        $stmtUpdateLoja->execute($values);
+    } elseif ($invoiceStatus === 'failed' && $lojaId) {
+        $updates = [];
+        $values = [];
+        if (sh_column_exists($pdo, 'lojas', 'trial_until')) {
+            $updates[] = 'trial_until = ?';
+            $values[] = null;
+        }
+        if (sh_column_exists($pdo, 'lojas', 'paid_until')) {
+            $updates[] = 'paid_until = ?';
+            $values[] = null;
+        }
+        if (sh_column_exists($pdo, 'lojas', 'subscription_status')) {
+            $updates[] = 'subscription_status = ?';
+            $values[] = 'cancelled';
+        }
+        if ($updates) {
+            $values[] = $lojaId;
+            $stmtUpdateLoja = $pdo->prepare("UPDATE lojas SET " . implode(', ', $updates) . " WHERE id = ?");
+            $stmtUpdateLoja->execute($values);
+        }
     }
 
     $pdo->commit();

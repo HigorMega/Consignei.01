@@ -43,14 +43,14 @@ function sh_get_subscription_snapshot(PDO $pdo, int $lojaId): array
 {
     $hasTrial = sh_column_exists($pdo, 'lojas', 'trial_until');
     $hasPaid = sh_column_exists($pdo, 'lojas', 'paid_until');
-    $hasStatus = sh_column_exists($pdo, 'lojas', 'assinatura_status');
+    $hasStatus = sh_column_exists($pdo, 'lojas', 'subscription_status');
 
     if (!$hasTrial && !$hasPaid && !$hasStatus) {
         return [
             'active' => true,
             'trial_until' => null,
             'paid_until' => null,
-            'assinatura_status' => null,
+            'subscription_status' => null,
         ];
     }
 
@@ -62,7 +62,7 @@ function sh_get_subscription_snapshot(PDO $pdo, int $lojaId): array
         $fields[] = 'paid_until';
     }
     if ($hasStatus) {
-        $fields[] = 'assinatura_status';
+        $fields[] = 'subscription_status';
     }
 
     $stmt = $pdo->prepare("SELECT " . implode(', ', $fields) . " FROM lojas WHERE id = ? LIMIT 1");
@@ -80,7 +80,7 @@ function sh_get_subscription_snapshot(PDO $pdo, int $lojaId): array
         'active' => $trialActive || $paidActive,
         'trial_until' => $trialUntil ? $trialUntil->format('Y-m-d H:i:s') : null,
         'paid_until' => $paidUntil ? $paidUntil->format('Y-m-d H:i:s') : null,
-        'assinatura_status' => $hasStatus ? ($row['assinatura_status'] ?? null) : null,
+        'subscription_status' => $hasStatus ? ($row['subscription_status'] ?? null) : null,
     ];
 }
 

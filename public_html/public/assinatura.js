@@ -97,7 +97,7 @@ const atualizarStatus = (status) => {
         btnAssinar.disabled = true;
         btnAssinar.textContent = 'Processando...';
         try {
-            const response = await fetch('../api/criar_assinatura_mp.php', {
+            const response = await fetch('../api/billing_create_checkout.php', {
                 method: 'POST',
                 credentials: 'include',
                 headers: { 'Content-Type': 'application/json' },
@@ -111,8 +111,9 @@ const atualizarStatus = (status) => {
                 return;
             }
 
-            if (data.success && data.init_point) {
-                window.location.href = data.init_point;
+            const checkoutUrl = data.checkout_url || data.init_point;
+            if (data.success && checkoutUrl) {
+                window.location.href = checkoutUrl;
                 return;
             }
 

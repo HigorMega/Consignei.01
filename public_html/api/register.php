@@ -116,10 +116,9 @@ try {
 
     // 6) Trial de assinatura (se colunas existirem)
     $hasTrialUntilColumn = columnExists($pdo, 'lojas', 'trial_until');
-    $hasAssinaturaStatusColumn = columnExists($pdo, 'lojas', 'assinatura_status');
     $hasSubscriptionStatusColumn = columnExists($pdo, 'lojas', 'subscription_status');
 
-    if ($hasTrialUntilColumn || $hasAssinaturaStatusColumn || $hasSubscriptionStatusColumn) {
+    if ($hasTrialUntilColumn || $hasSubscriptionStatusColumn) {
         $updates = [];
         $values = [];
 
@@ -127,11 +126,6 @@ try {
             $trialUntil = (new DateTimeImmutable('now'))->modify('+5 days')->format('Y-m-d H:i:s');
             $updates[] = "trial_until = ?";
             $values[] = $trialUntil;
-        }
-
-        if ($hasAssinaturaStatusColumn) {
-            $updates[] = "assinatura_status = ?";
-            $values[] = "trial";
         }
 
         if ($hasSubscriptionStatusColumn) {
