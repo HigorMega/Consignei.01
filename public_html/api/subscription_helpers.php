@@ -15,6 +15,11 @@ function sh_column_exists(PDO $pdo, string $table, string $column): bool
 function sh_require_login(): void
 {
     if (empty($_SESSION['loja_id'])) {
+        if (defined('SH_REDIRECT_MODE') && SH_REDIRECT_MODE) {
+            header('Location: /public/login.html', true, 302);
+            exit;
+        }
+
         http_response_code(401);
         echo json_encode(['success' => false, 'message' => 'Sessão expirada.']);
         exit;
