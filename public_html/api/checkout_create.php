@@ -6,21 +6,12 @@ ini_set('display_errors', 0);
 
 require_once "../db/conexao.php";
 require_once __DIR__ . "/subscription_helpers.php";
-
-function mp_log_preference(string $message): void
-{
-    $logDir = __DIR__ . '/../logs';
-    if (!is_dir($logDir)) {
-        mkdir($logDir, 0755, true);
-    }
-    $timestamp = date('Y-m-d H:i:s');
-    file_put_contents($logDir . '/checkout_mp.log', $timestamp . " - " . $message . PHP_EOL, FILE_APPEND);
-}
+require_once __DIR__ . "/../lib/mercadopago.php";
 
 try {
     sh_require_login();
 
-    $accessToken = env('MP_ACCESS_TOKEN');
+    $accessToken = mp_get_access_token();
     if (!$accessToken) {
         throw new Exception('MP_ACCESS_TOKEN não configurado.');
     }
@@ -63,11 +54,21 @@ try {
         $stmtUpdateInvoice->execute([$externalReference, $invoiceId]);
     }
 
+    $payerInfo = mp_resolve_payer_email($loja['email'] ?? null);
+    if (mp_is_sandbox() && $payerInfo['source'] !== 'test') {
+        http_response_code(422);
+        echo json_encode([
+            'success' => false,
+            'message' => 'Configure um e-mail de comprador de teste (MP_TEST_PAYER_EMAIL) diferente do vendedor para pagar no modo teste.',
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
     $payload = [
         'external_reference' => $externalReference,
         'notification_url' => $appUrl . '/api/pagamentos_webhook.php',
         'payer' => [
-            'email' => $loja['email'] ?? null,
+            'email' => $payerInfo['email'],
         ],
         'items' => [
             [
@@ -81,34 +82,13 @@ try {
         ],
     ];
 
-    mp_log_preference("Iniciando checkout preference para Loja ID: {$lojaId}");
-    mp_log_preference('Payload enviado: ' . json_encode($payload, JSON_UNESCAPED_UNICODE));
+    mp_log('checkout_preference_start', ['loja_id' => $lojaId, 'external_reference' => $externalReference]);
+    mp_log('checkout_preference_payload', ['payload' => $payload]);
 
-    $ch = curl_init('https://api.mercadopago.com/checkout/preferences');
-    curl_setopt_array($ch, [
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_POST => true,
-        CURLOPT_HTTPHEADER => [
-            'Authorization: Bearer ' . $accessToken,
-            'Content-Type: application/json',
-        ],
-        CURLOPT_POSTFIELDS => json_encode($payload),
-    ]);
+    $response = mp_request('POST', '/checkout/preferences', $payload);
+    $data = $response['data'] ?? [];
 
-    $response = curl_exec($ch);
-    $curlError = curl_error($ch);
-    $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
-
-    if ($response === false) {
-        mp_log_preference('Erro cURL: ' . $curlError);
-        throw new Exception('Erro ao conectar ao Mercado Pago: ' . $curlError);
-    }
-
-    mp_log_preference('Resposta MP (' . $httpCode . '): ' . $response);
-
-    $data = json_decode($response, true);
-    if ($httpCode >= 400) {
+    if (!$response['success']) {
         $message = 'Erro ao criar pagamento no Mercado Pago.';
         $mpMessage = '';
 
@@ -121,17 +101,26 @@ try {
         }
 
         if ($mpMessage) {
-            $message .= ' Detalhe: ' . $mpMessage;
+            $normalized = mb_strtolower($mpMessage);
+            if (str_contains($normalized, 'payer') && str_contains($normalized, 'collector')) {
+                $message = 'Use um comprador de teste diferente da conta vendedora Mercado Pago para continuar.';
+            } else {
+                $message .= ' Detalhe: ' . $mpMessage;
+            }
         }
 
-        mp_log_preference('Falha no checkout: ' . $message);
-        http_response_code($httpCode);
+        mp_log('checkout_preference_failed', [
+            'message' => $message,
+            'status' => $response['status'],
+            'request_id' => $response['request_id'] ?? null,
+        ]);
+        http_response_code($response['status'] ?: 502);
         echo json_encode(['success' => false, 'message' => $message], JSON_UNESCAPED_UNICODE);
         exit;
     }
 
     if (empty($data['id'])) {
-        mp_log_preference('Resposta inválida do MP: ' . $response);
+        mp_log('checkout_preference_invalid', ['response' => $response['raw'] ?? null]);
         throw new Exception('Resposta inválida do Mercado Pago.');
     }
 
@@ -141,7 +130,7 @@ try {
         'init_point' => $data['init_point'] ?? null,
     ], JSON_UNESCAPED_UNICODE);
 } catch (Exception $e) {
-    mp_log_preference('Erro crítico: ' . $e->getMessage());
+    mp_log('checkout_preference_error', ['error' => $e->getMessage()]);
     http_response_code(500);
     echo json_encode(['success' => false, 'message' => $e->getMessage()], JSON_UNESCAPED_UNICODE);
 }

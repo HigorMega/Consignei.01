@@ -6,6 +6,7 @@ session_start();
 
 require_once __DIR__ . '/../db/conexao.php';
 require_once __DIR__ . '/subscription_helpers.php';
+require_once __DIR__ . '/../lib/mercadopago.php';
 
 function billing_json_error(int $status, string $error, ?string $detail = null): void
 {
@@ -104,9 +105,7 @@ try {
         'active' => $trialActive || $paidActive,
     ];
 
-    $accessToken = (string) env('MP_ACCESS_TOKEN');
-    $response['is_sandbox'] = strtolower((string) env('MP_MODE', '')) === 'sandbox'
-        || ($accessToken !== '' && str_starts_with($accessToken, 'TEST-'));
+    $response['is_sandbox'] = mp_is_sandbox();
 
     echo json_encode($response, JSON_UNESCAPED_UNICODE);
 } catch (Throwable $e) {
