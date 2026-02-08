@@ -18,6 +18,9 @@ $payload = $GLOBALS['mp_webhook_payload'] ?? (json_decode($rawBody, true) ?: [])
 $headers = mp_get_request_headers();
 $type = (string) ($payload['type'] ?? '');
 $action = (string) ($payload['action'] ?? '');
+$normalizedHeaders = mp_normalize_headers($headers);
+$hasSignature = !empty($normalizedHeaders['x-signature']);
+$isLiveMode = (bool) ($payload['live_mode'] ?? false);
 
 mp_log('webhook_received', [
     'event_id' => $payload['id'] ?? null,
@@ -47,6 +50,17 @@ if ($isPayment) {
         'type' => $type ?: null,
         'action' => $action ?: null,
     ]);
+}
+
+if (!$hasSignature && !$isLiveMode) {
+    mp_log('webhook_test_no_signature', [
+        'type' => $type ?: null,
+        'action' => $action ?: null,
+        'event_id' => $payload['id'] ?? null,
+    ]);
+    http_response_code(200);
+    echo json_encode(['ok' => true, 'test_mode' => true], JSON_UNESCAPED_UNICODE);
+    exit;
 }
 
 if (!mp_validate_webhook_signature($rawBody, $headers)) {
